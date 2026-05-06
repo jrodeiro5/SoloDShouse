@@ -118,13 +118,28 @@ Current demo data uses ECB SDW API data and DAX sample data. The active runtime 
 
 ## Evolution Roadmap
 
-- **v1.0:** local medallion lakehouse foundation.
-- **v2.0:** Dagster orchestration introduced.
-- **v2.5:** current single runtime with Iceberg Gold, OpenMetadata, Superset, and Dagster-first execution.
-- **v3.0 planned:** Kubernetes, Helm, Terraform, secrets governance, access controls, SLOs, and promotion/rollback patterns.
-- **v4.0 planned:** self-serve usability and stronger operational polish.
+The platform evolves along a single narrative: **first make it run, then make every claim provable on the same Compose stack, and only then migrate the runtime to Kubernetes.** Each minor version after v2.5 adds one category of evidence the platform can produce.
 
-See [docs/roadmap.md](docs/roadmap.md) for the canonical roadmap.
+| Version | Theme | Problem | Focus |
+|---------|-------|---------|-------|
+| **v2.5** *(delivered)* | Platform can run | local-first lakehouse baseline | reproducible Docker Compose stack, Bronze/Silver/Gold flow, Trino, Dagster, MLflow, OpenMetadata, Superset |
+| **v2.6** *(planned)* | Platform can produce evidence | regulatory lineage & audit readiness | Dagster + OpenMetadata + Iceberg three-source lineage join, signable audit evidence pack on WORM storage, **DORA 24h / BaFin-style** traceability, data contracts as the gate |
+| **v2.7** *(planned)* | Platform can prove openness | data sovereignty & vendor lock-in | multi-engine Iceberg demo (Trino / Spark / DuckDB / Flink), Hive Metastore ↔ Iceberg REST Catalog switch, signable sovereignty report + exit playbook, Databricks-to-Iceberg migration PoC |
+| **v2.8** *(planned)* | Platform can govern AI | compliant AI / model traceability | MLflow ↔ Iceberg snapshot five-tuple binding (snapshot_id, dagster.run_id, feature_version, code_commit, data_contract_hash), auto **EU AI Act Art.13** model card, ML asset checks for performance regression *(model serving stays out — ADR-011)* |
+| **v2.9** *(planned)* | Platform has production shape | operational readiness | SLO emit + Superset "Platform Health" dashboard, `.env.shared` vs `.env.secrets` discipline, promotion/rollback drill with `make` entrypoints, Iceberg snapshot rollback drill, K8s readiness gate before v3.0 |
+| **v3.0** *(planned)* | Platform can run in production | scalable deployment & environment management | Kubernetes, Helm, Terraform, dev/stage/prod separation, managed secrets, GitOps-ready deployment model |
+| **v4.0** *(planned)* | Self-serve usability | docs-first onboarding | repeatable verification, clearer failure modes, operational polish |
+
+Per-version planning notes:
+
+- v2.5 — [docs/history/v2.5-planning.md](docs/history/v2.5-planning.md)
+- v2.6 — [docs/history/v2.6-planning.md](docs/history/v2.6-planning.md)
+- v2.7 — [docs/history/v2.7-planning.md](docs/history/v2.7-planning.md)
+- v2.8 — [docs/history/v2.8-planning.md](docs/history/v2.8-planning.md)
+- v2.9 — [docs/history/v2.9-planning.md](docs/history/v2.9-planning.md)
+- v3.0 — [docs/history/v3-planning.md](docs/history/v3-planning.md)
+
+See [docs/roadmap.md](docs/roadmap.md) for the canonical version status table, and [docs/history/timeline.md](docs/history/timeline.md) for the full evolution timeline.
 
 ## Portability Notes
 
