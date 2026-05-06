@@ -30,9 +30,9 @@
 
 ---
 
-SoloLakehouse is a readable, runnable, cloud-neutral lakehouse reference architecture. It shows how the pieces behind a modern data platform fit together without relying on a managed SaaS layer.
+SoloLakehouse is a self-contained, cloud-neutral lakehouse reference platform that shows how the pieces behind a modern, audit-ready data platform fit together without depending on a managed SaaS lakehouse service.
 
-It is not a framework or library. It is a production-minded reference stack you can run locally, inspect end to end, fork, critique, and extend.
+It is built end-to-end on Docker Compose — small enough to read in a weekend, complete enough to discuss production trade-offs, and explicit enough to map onto DORA, BaFin BAIT/MaRisk, and EU AI Act Title III obligations.
 
 ## Architecture
 
@@ -59,19 +59,16 @@ Platform services:
 
 The detailed architecture is in [docs/architecture.md](docs/architecture.md), and the medallion conventions are in [docs/medallion-model.md](docs/medallion-model.md).
 
-## Why SoloLakehouse Exists
+## What It Solves
 
-Enterprise data platforms are often explained through vendor products: Databricks, Snowflake, managed Airflow, managed catalogs, managed object storage, managed everything. SoloLakehouse takes the opposite route. It exposes the core platform mechanics on one local runtime so the architecture is understandable, portable, and owned by the engineer running it.
+Most lakehouse tutorials show **how to plug components together**. SoloLakehouse is built to answer the harder questions a regulated European platform team actually faces:
 
-The project exists to demonstrate:
-
-| Principle | What it means in SoloLakehouse |
-|-----------|--------------------------------|
-| **Cloud independence** | The platform runs locally with open-source components and avoids requiring a managed cloud lakehouse service. |
-| **Compliance awareness** | Data boundaries, service responsibilities, metadata, release checks, and architecture decisions are explicit rather than implied. |
-| **Portability** | Storage, orchestration, catalog, BI, and deployment layers have documented migration paths. |
-| **Platform engineering capability** | The project demonstrates orchestration, data quality, metadata, ML tracking, BI access, CI, ADRs, release discipline, and roadmap ownership. |
-| **Readable architecture** | The stack is intentionally small enough to inspect but complete enough to discuss production trade-offs. |
+| Problem the platform answers | How SoloLakehouse addresses it |
+|---|---|
+| **"If BaFin asks for end-to-end lineage of this Gold table tomorrow, can we deliver it in 24h?"** | Three-source lineage join (OpenMetadata + Iceberg snapshots + Dagster runs) producing signable evidence packs to a WORM bucket. *([v2.6 — planned](docs/history/v2.6-planning.md))* |
+| **"Are we locked into our vendor's table format?"** | Iceberg Gold tables readable by Trino today, with documented multi-engine paths (Spark / DuckDB / Flink) and Hive-Metastore ↔ REST-Catalog switch. *([v2.7 — planned](docs/history/v2.7-planning.md))* |
+| **"Can we trace any model artifact back to the exact training data, code commit, and orchestration run?"** | MLflow runs bound to Iceberg snapshot id + Dagster run id + code commit + data-contract hash, with auto-generated EU AI Act Art.13 model cards. *([v2.8 — planned](docs/history/v2.8-planning.md))* |
+| **"Can the same stack run on a laptop and on Kubernetes without rewriting?"** | All services are containerized, configuration-externalized, state-externalized; v3.0 promotes the same images to K8s + Helm + Terraform. *([v2.9](docs/history/v2.9-planning.md) → [v3.0](docs/history/v3-planning.md))* |
 
 
 ## Quick Start
@@ -104,21 +101,33 @@ Key UIs:
 
 See [docs/quickstart.md](docs/quickstart.md) and [docs/deployment.md](docs/deployment.md) for details, sizing, credentials, and troubleshooting.
 
-## What It Demonstrates
+## Capabilities Demonstrated (v2.5)
 
-- End-to-end medallion flow: **sources -> Bronze -> Silver -> Gold -> BI / ML**.
-- Dagster asset orchestration with jobs, schedules, sensors, and checks.
-- Trino SQL over Hive and Iceberg catalogs.
-- Gold-layer Iceberg tables managed through Trino.
-- MLflow experiment tracking with artifacts on object storage.
-- OpenMetadata catalog integration and Superset BI access.
-- CI, release checks, ADRs, and a candid self-assessment of current limits.
+- **Medallion architecture** with strict Bronze immutability, Pydantic-v2 schema validation at ingestion, and Iceberg-backed Gold
+- **Asset-aware orchestration** in Dagster — jobs, schedules, sensors, asset checks, and lineage in the UI (not task-based DAGs)
+- **Federated query** across Hive (Bronze/Silver) and Iceberg (Gold) catalogs via a single Trino endpoint
+- **Open table format discipline** — Iceberg Gold tables managed via Trino CTAS, no proprietary engine lock-in
+- **ML governance baseline** — MLflow experiments with object-storage artifacts; `TimeSeriesSplit` CV as a discipline (look-ahead bias is treated as a defect, not a default)
+- **Catalog & BI integration** — OpenMetadata for lineage and ownership, Superset for SQL-first BI on Trino
+- **Production-minded engineering** — CI gates, type checking, ADRs per non-trivial decision, release notes and planning notes per minor version
 
-Current demo data uses ECB SDW API data and DAX sample data. The active runtime is **v2.5 only**; historical v1/v2 material lives in [docs/history/](docs/history/).
+The reference data domain is European financial markets — ECB Statistical Data Warehouse interest rates and the DAX equity index — chosen deliberately because it surfaces real-world challenges in temporal joins, look-ahead bias, and regulatory data lineage. The active runtime is **v2.5**; historical v1/v2 material is preserved under [docs/history/](docs/history/).
+
+## Engineering Practices
+
+Beyond the platform features, this is built with explicit engineering discipline a hiring panel can audit:
+
+- **Test discipline** — pure-function transforms unit-tested without Docker; Pydantic v2 schema validation on every Bronze record; quality checks fail-fast rather than silent-degrade
+- **Type discipline** — `mypy` over `ingestion/`, `transformations/`, `ml/`, `scripts/`, `dagster/`
+- **Lint discipline** — `ruff` enforced in CI
+- **Architecture discipline** — every non-trivial decision recorded as an [ADR](docs/decisions/README.md)
+- **Release discipline** — version-tagged release notes, planning note per minor version, evolution timeline at [docs/history/timeline.md](docs/history/timeline.md)
+- **Observability discipline** — `structlog` JSON events at every step boundary; SLO emit pipeline planned for [v2.9](docs/history/v2.9-planning.md)
+- **CI** — GitHub Actions runs lint + typecheck + tests on every push
 
 ## Evolution Roadmap
 
-The platform evolves along a single narrative: **first make it run, then make every claim provable on the same Compose stack, and only then migrate the runtime to Kubernetes.** Each minor version after v2.5 adds one category of evidence the platform can produce.
+The platform evolves along a single narrative: **first make it run, then make every claim provable on the same Compose stack, and only then migrate the runtime to Kubernetes.** v2.5 is the live runtime today (capabilities listed above). Each minor version after that adds **one category of evidence** the platform can produce — without changing the runtime.
 
 | Version | Theme | Problem | Focus |
 |---------|-------|---------|-------|
@@ -141,28 +150,20 @@ Per-version planning notes:
 
 See [docs/roadmap.md](docs/roadmap.md) for the canonical version status table, and [docs/history/timeline.md](docs/history/timeline.md) for the full evolution timeline.
 
-## Portability Notes
+## Portability & Migration Paths
 
-The stack is intentionally built around replaceable boundaries:
+The platform is built around **replaceable boundaries** — not because every component will be replaced, but because every component **could** be without rewriting the platform contract:
 
-- MinIO can evolve toward SeaweedFS, Ceph, or cloud object storage.
-- Docker Compose can evolve toward Kubernetes, Helm, and Terraform.
-- Local PostgreSQL can evolve toward managed or HA PostgreSQL.
-- Superset and OpenMetadata can be swapped for enterprise BI/catalog tools.
-- Local secrets can evolve toward Vault or cloud secret managers.
+| Boundary | Current (v2.5) | Migration target | Trigger criteria |
+|----------|----------------|------------------|------------------|
+| Object storage | MinIO | SeaweedFS / Ceph / S3 / GCS | scale beyond single-node throughput; multi-region requirement |
+| Runtime | Docker Compose | Kubernetes + Helm + Terraform | multi-environment promotion; HA / SLO requirement *(v3.0)* |
+| Metadata DB | Local PostgreSQL 17 | Managed / HA PostgreSQL | RPO < 24h or production SLO commitment |
+| Catalog | Hive Metastore | Iceberg REST Catalog | multi-engine demand or vendor-neutral catalog requirement *(v2.7)* |
+| Secrets | `.env` files | Vault / cloud KMS | multi-tenant or multi-environment deployment *(v3.0)* |
+| BI / Catalog | Superset / OpenMetadata | Enterprise tool (Looker, Atlan, etc.) | enterprise procurement constraints |
 
-These trade-offs are documented in the [ADR index](docs/decisions/README.md).
-
-## Demo Visuals
-
-Screenshot placeholders are reserved for the next visual pass:
-
-- `docs/img/readme/dagster.png`
-- `docs/img/readme/superset.png`
-- `docs/img/readme/openmetadata.png`
-- `docs/img/readme/mlflow.png`
-- `docs/img/readme/trino.png`
-- `docs/img/readme/minio.png`
+Each boundary has a corresponding ADR explaining the current choice and the explicit conditions under which it should change. See the [ADR index](docs/decisions/README.md).
 
 ## Documentation
 
