@@ -101,6 +101,10 @@ Key UIs:
 
 See [docs/quickstart.md](docs/quickstart.md) and [docs/deployment.md](docs/deployment.md) for details, sizing, credentials, and troubleshooting.
 
+## Demo
+
+- SLH setup demo (YouTube): [https://www.youtube.com/watch?v=dH0Nwteas7E](https://www.youtube.com/watch?v=dH0Nwteas7E)
+
 ## Capabilities Demonstrated (v2.5)
 
 - **Medallion architecture** with strict Bronze immutability, Pydantic-v2 schema validation at ingestion, and Iceberg-backed Gold
