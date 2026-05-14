@@ -719,18 +719,18 @@ During the window:
 ### Before Entity Split
 
 - [ ] v2.5 accepted and tagged.
-- [ ] Entity contract written.
+- [x] Entity contract written (`docs/product-entity-contract.md`).
 - [ ] Runtime identity configurable.
 - [ ] Buckets configurable.
 - [ ] Warehouse URI configurable.
 - [ ] MLflow artifact root configurable.
 - [ ] Audit bucket planned.
 - [ ] Lightweight portal planned and implemented.
-- [ ] Dataset ID convention defined.
+- [x] Dataset ID convention defined (`docs/dataset-governance-naming.md`).
 - [ ] Backup procedure written.
 - [ ] Restore drill completed.
-- [ ] MinIO retained as initial provider.
-- [ ] Object-store abstraction prepared.
+- [x] MinIO retained as initial provider (`docs/object-store-abstraction.md`).
+- [x] Object-store abstraction prepared (`docs/object-store-abstraction.md`).
 
 ### FinLakehouse
 
