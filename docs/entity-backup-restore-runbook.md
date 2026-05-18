@@ -133,12 +133,54 @@ grep -E '^(PRODUCT_ID|ENVIRONMENT|RUNTIME_VERSION|DATA_BUCKET|AUDIT_BUCKET|MLFLO
 
 ### 2. Mirror Object-Store Buckets
 
-Load bucket names from the entity `.env`:
+Resolve only the variables needed by shell commands. Do not blindly
+`source`/`.` a Compose `.env` file; Compose env files may contain values with
+spaces that are valid for Docker Compose but not valid shell assignment syntax.
 
 ```bash
-set -a
-. "$ENV_FILE"
-set +a
+env_value() {
+  python3 - "$ENV_FILE" "$1" <<'PY'
+import ast
+import re
+import sys
+
+env_file, key = sys.argv[1], sys.argv[2]
+value = ""
+with open(env_file, encoding="utf-8") as handle:
+    for raw_line in handle:
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, raw_value = line.split("=", 1)
+        if name != key:
+            continue
+        raw_value = raw_value.strip()
+        if len(raw_value) >= 2 and raw_value[0] == raw_value[-1] and raw_value[0] in "'\"":
+            try:
+                value = ast.literal_eval(raw_value)
+            except (SyntaxError, ValueError):
+                value = raw_value[1:-1]
+        else:
+            value = re.sub(r"\s+#.*$", "", raw_value)
+print(value)
+PY
+}
+
+MINIO_ROOT_USER="$(env_value MINIO_ROOT_USER)"
+MINIO_ROOT_PASSWORD="$(env_value MINIO_ROOT_PASSWORD)"
+DATA_BUCKET="$(env_value DATA_BUCKET)"
+BUCKET_NAME="$(env_value BUCKET_NAME)"
+AUDIT_BUCKET="$(env_value AUDIT_BUCKET)"
+MLFLOW_ARTIFACT_BUCKET="$(env_value MLFLOW_ARTIFACT_BUCKET)"
+
+DATA_BUCKET="${DATA_BUCKET:-${BUCKET_NAME:-sololakehouse}}"
+if [ "$DATA_BUCKET" = "sololakehouse" ]; then
+  DEFAULT_MLFLOW_ARTIFACT_BUCKET="mlflow-artifacts"
+else
+  DEFAULT_MLFLOW_ARTIFACT_BUCKET="${DATA_BUCKET%-data}-mlflow"
+fi
+AUDIT_BUCKET="${AUDIT_BUCKET:-${DATA_BUCKET%-data}-audit}"
+MLFLOW_ARTIFACT_BUCKET="${MLFLOW_ARTIFACT_BUCKET:-$DEFAULT_MLFLOW_ARTIFACT_BUCKET}"
 ```
 
 Mirror data, audit, and MLflow artifact buckets. This command uses the existing
@@ -151,6 +193,7 @@ for bucket in "$DATA_BUCKET" "$AUDIT_BUCKET" "$MLFLOW_ARTIFACT_BUCKET"; do
     -v "$BACKUP_ROOT/object-store:/backup" \
     --entrypoint sh minio-init -c "
       mc alias set local http://minio:9000 \"$MINIO_ROOT_USER\" \"$MINIO_ROOT_PASSWORD\" &&
+      mkdir -p \"/backup/${bucket}\" &&
       mc mirror --overwrite \"local/${bucket}\" \"/backup/${bucket}\"
     "
 done
@@ -281,26 +324,28 @@ export BACKUP_ROOT="/opt/${PRODUCT_ID}/backup/<backup-id>"
 mkdir -p "$RESTORE_ROOT"
 git clone <repo-url> "$RESTORE_ROOT/app"
 cd "$RESTORE_ROOT/app"
-install -m 0600 "$BACKUP_ROOT/files/env.snapshot" "$RESTORE_ROOT/.env"
-export ENV_FILE="$RESTORE_ROOT/.env"
+install -m 0600 "$BACKUP_ROOT/files/env.snapshot" .env
+export ENV_FILE=".env"
 export COMPOSE_FILES="-f docker/docker-compose.yml -f docker/docker-compose.openmetadata.yml -f docker/docker-compose.superset.yml"
 ```
 
-For a local disposable drill inside the repository, use a new clone or move the
-existing `docker/data/` aside before restoring.
+For a product entity runtime root, you may keep the entity `.env` outside the
+app directory, for example at `/opt/<product_id>/.env`. For a local disposable
+clone, place the snapshot at `$RESTORE_ROOT/app/.env` so host-side verification
+scripts that load the repository `.env` see the restored entity settings.
+
+For a local disposable drill inside an existing repository checkout, use a new
+clone or move the existing `docker/data/` aside before restoring.
 
 ### 2. Start Base Services
 
-Load the restored `.env` into the shell before bootstrapping PostgreSQL.
-`scripts/bootstrap-postgres.py` reads host environment variables, so passing
-only `ENV_FILE` to `make bootstrap-db` is not enough for restored entities with
-custom database settings.
+Start PostgreSQL and MinIO from the restored `ENV_FILE`. For local reference
+restores where `.env` is in the app root, `scripts/bootstrap-postgres.py` loads
+that file directly. For product restores that keep `.env` outside the app root,
+export shell-compatible database settings explicitly before running
+`make bootstrap-db`.
 
 ```bash
-set -a
-. "$ENV_FILE"
-set +a
-
 ENV_FILE="$ENV_FILE" make prepare-data-dirs
 docker compose --env-file "$ENV_FILE" \
   -f docker/docker-compose.yml \
@@ -311,14 +356,9 @@ ENV_FILE="$ENV_FILE" make bootstrap-db
 
 ### 3. Restore Object-Store Buckets
 
-If this step is run from a new shell, load the restored entity configuration
-again:
-
-```bash
-set -a
-. "$ENV_FILE"
-set +a
-```
+If this step is run from a new shell, re-run the variable-resolution snippet
+from the backup section so `DATA_BUCKET`, `AUDIT_BUCKET`,
+`MLFLOW_ARTIFACT_BUCKET`, `MINIO_ROOT_USER`, and `MINIO_ROOT_PASSWORD` are set.
 
 Create expected buckets, then mirror object data back:
 
@@ -331,6 +371,10 @@ for bucket in "$DATA_BUCKET" "$AUDIT_BUCKET" "$MLFLOW_ARTIFACT_BUCKET"; do
     -v "$BACKUP_ROOT/object-store:/backup" \
     --entrypoint sh minio-init -c "
       mc alias set local http://minio:9000 \"$MINIO_ROOT_USER\" \"$MINIO_ROOT_PASSWORD\" &&
+      if [ ! -d \"/backup/${bucket}\" ]; then
+        echo \"Missing object-store backup source: /backup/${bucket}\" >&2
+        exit 1
+      fi &&
       mc mirror --overwrite \"/backup/${bucket}\" \"local/${bucket}\"
     "
 done
@@ -389,7 +433,12 @@ tar -C docker/data -xzf "$BACKUP_ROOT/openmetadata/om-elasticsearch-data.tgz"
 ```
 
 If not restoring Elasticsearch, start OpenMetadata and re-ingest metadata from
-Trino after the stack is healthy.
+Trino after the stack is healthy. If the OpenMetadata MySQL dump fails to
+restore, reset the disposable target's OpenMetadata MySQL data directory, start
+OpenMetadata cleanly, and record the entity as using the re-ingestion path for
+catalog state. Do not let OpenMetadata catalog-history continuity block restore
+acceptance unless catalog-history preservation is an explicit requirement for
+that entity.
 
 ### 6. Restore Dagster Local Files
 
