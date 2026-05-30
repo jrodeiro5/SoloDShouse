@@ -74,7 +74,8 @@ Historical version narratives are preserved under `docs/history/`.
 
 | Document | Purpose |
 |----------|---------|
-| [项目现状总览_2026-05-19.md](项目现状总览_2026-05-19.md) | Latest CN snapshot — pre-FinLakehouse-split engineering baseline |
+| [项目现状总览_2026-05-30.md](项目现状总览_2026-05-30.md) | Latest CN snapshot — post-ADR-020 FinLakehouse deployment-readiness baseline |
+| [项目现状总览_2026-05-19.md](项目现状总览_2026-05-19.md) | CN snapshot — pre-FinLakehouse-split engineering baseline |
 | [项目现状总览_2026-05-09.md](项目现状总览_2026-05-09.md) | CN snapshot — v2.5 acceptance gap analysis |
 | [项目现状总览_2026-05-05.md](项目现状总览_2026-05-05.md) | CN snapshot — v2.5 baseline overview |
 | [project-state-overview-2026-05-05.md](project-state-overview-2026-05-05.md) | EN equivalent of the 05-05 CN snapshot |
