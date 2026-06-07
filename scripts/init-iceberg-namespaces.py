@@ -18,12 +18,10 @@ import structlog
 from pyiceberg.exceptions import TableAlreadyExistsError
 from pyiceberg.partitioning import PartitionSpec
 
-# Allow running from the project root without installing the package.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def _load_dotenv() -> None:
-    """Load .env from the repo root if present (same logic as verify-demo.py)."""
     env_path = Path(__file__).resolve().parent.parent / ".env"
     if not env_path.exists():
         return
@@ -44,24 +42,25 @@ logger = structlog.get_logger()
 def main() -> None:
     from ingestion.iceberg_io import ensure_namespace, get_catalog
     from ingestion.iceberg_schemas import (
-        BRONZE_DAX_DAILY_PARTITION,
-        BRONZE_DAX_DAILY_SCHEMA,
-        BRONZE_ECB_RATES_PARTITION,
-        BRONZE_ECB_RATES_SCHEMA,
+        BRONZE_CLOUD_GPU_PRICING_PARTITION,
+        BRONZE_CLOUD_GPU_PRICING_SCHEMA,
+        BRONZE_FX_RATES_PARTITION,
+        BRONZE_FX_RATES_SCHEMA,
+        BRONZE_MLPERF_BENCHMARKS_PARTITION,
+        BRONZE_MLPERF_BENCHMARKS_SCHEMA,
         BRONZE_REJECTED_SCHEMA,
-        GOLD_FEATURES_SCHEMA,
-        SILVER_DAX_DAILY_SCHEMA,
-        SILVER_ECB_RATES_SCHEMA,
+        SILVER_CLOUD_GPU_PRICING_SCHEMA,
+        SILVER_MLPERF_EFFICIENCY_SCHEMA,
     )
 
     tables = [
         # (namespace, table_name, schema, partition_spec)
-        ("bronze", "ecb_rates", BRONZE_ECB_RATES_SCHEMA, BRONZE_ECB_RATES_PARTITION),
-        ("bronze", "dax_daily", BRONZE_DAX_DAILY_SCHEMA, BRONZE_DAX_DAILY_PARTITION),
+        ("bronze", "mlperf_benchmarks", BRONZE_MLPERF_BENCHMARKS_SCHEMA, BRONZE_MLPERF_BENCHMARKS_PARTITION),
+        ("bronze", "cloud_gpu_pricing", BRONZE_CLOUD_GPU_PRICING_SCHEMA, BRONZE_CLOUD_GPU_PRICING_PARTITION),
+        ("bronze", "fx_rates", BRONZE_FX_RATES_SCHEMA, BRONZE_FX_RATES_PARTITION),
         ("bronze", "rejected_records", BRONZE_REJECTED_SCHEMA, None),
-        ("silver", "ecb_rates_cleaned", SILVER_ECB_RATES_SCHEMA, None),
-        ("silver", "dax_daily_cleaned", SILVER_DAX_DAILY_SCHEMA, None),
-        ("gold", "ecb_dax_features", GOLD_FEATURES_SCHEMA, None),
+        ("silver", "mlperf_efficiency", SILVER_MLPERF_EFFICIENCY_SCHEMA, None),
+        ("silver", "cloud_gpu_pricing", SILVER_CLOUD_GPU_PRICING_SCHEMA, None),
     ]
 
     catalog = get_catalog()

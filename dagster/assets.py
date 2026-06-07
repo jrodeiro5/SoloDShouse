@@ -1,4 +1,4 @@
-"""Dagster software-defined assets for the SoloLakehouse v2.5 runtime."""
+"""Dagster software-defined assets for SoloDShouse AI energy cost domain."""
 
 from __future__ import annotations
 
@@ -8,8 +8,6 @@ from typing import Any
 
 import pandas as pd
 import structlog
-from resources import IcebergCatalogResource, PipelineConfigResource
-
 from dagster import (
     AssetCheckResult,
     AssetKey,
@@ -20,11 +18,12 @@ from dagster import (
     asset_check,
     sensor,
 )
+from resources import IcebergCatalogResource
+
 from ingestion import iceberg_io
-from ingestion.collectors.dax_collector import DAXCollector
-from ingestion.collectors.ecb_collector import ECBCollector
-from ml.evaluate import run_experiment_set
-from transformations import dax_bronze_to_silver, ecb_bronze_to_silver, silver_to_gold_features
+from ingestion.collectors.cloud_pricing_collector import CloudPricingCollector
+from ingestion.collectors.mlperf_collector import MLPerfCollector
+from transformations import mlperf_bronze_to_silver, pricing_bronze_to_silver
 
 logger = structlog.get_logger()
 
@@ -34,148 +33,115 @@ def _emit_metric(step: str, started_at: float) -> None:
     logger.info("pipeline_metric", metric="pipeline.step.duration_ms", step=step, value=duration_ms)
 
 
-def _metadata_row_count(result: dict[str, Any]) -> int:
-    row_count = result.get("row_count", 0)
-    if isinstance(row_count, bool):
-        return int(row_count)
-    if isinstance(row_count, int | float | str):
-        return int(row_count)
-    return 0
+def _row_count(result: dict[str, Any]) -> int:
+    v = result.get("row_count", 0)
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return 0
 
 
-@asset(group_name="bronze", retry_policy=RetryPolicy(max_retries=3, delay=5))
-def ecb_bronze(
+# ── Bronze ────────────────────────────────────────────────────────────────────
+
+
+@asset(group_name="bronze", retry_policy=RetryPolicy(max_retries=3, delay=10))
+def mlperf_bronze(
     context,
     iceberg_catalog: IcebergCatalogResource,
-    pipeline_config: PipelineConfigResource,
 ) -> dict[str, Any]:
+    """Ingest MLCommons MLPerf inference benchmark results → Bronze."""
     started = time.perf_counter()
-    catalog = iceberg_catalog.get_catalog()
-    result = ECBCollector(
-        catalog=catalog,
-        bucket=pipeline_config.bucket,
-        force=False,
-    ).collect()
+    result = MLPerfCollector(iceberg_catalog.get_catalog()).collect()
     context.add_output_metadata(
         {
-            "status": result.get("status", "ok"),
-            "valid_count": int(result.get("valid_count", 0)),
-            "rejected_count": int(result.get("rejected_count", 0)),
-            "partition_date": date.today().isoformat(),
-            "path": result.get("path", ""),
-            "rejected_path": result.get("rejected_path") or "",
+            "round_id": result.get("round_id", ""),
+            "valid": result.get("valid", 0),
+            "rejected": result.get("rejected", 0),
         }
     )
-    _emit_metric("ecb_bronze", started)
+    _emit_metric("mlperf_bronze", started)
     return result
 
 
-@asset(group_name="bronze", retry_policy=RetryPolicy(max_retries=3, delay=5))
-def dax_bronze(
+@asset(group_name="bronze", retry_policy=RetryPolicy(max_retries=3, delay=10))
+def cloud_pricing_bronze(
     context,
     iceberg_catalog: IcebergCatalogResource,
-    pipeline_config: PipelineConfigResource,
 ) -> dict[str, Any]:
+    """Ingest Azure GPU pricing + FRED FX rates → Bronze (two tables)."""
     started = time.perf_counter()
-    catalog = iceberg_catalog.get_catalog()
-    result = DAXCollector(
-        catalog=catalog,
-        bucket=pipeline_config.bucket,
-        force=False,
-    ).collect()
+    result = CloudPricingCollector(iceberg_catalog.get_catalog()).collect()
     context.add_output_metadata(
         {
-            "status": result.get("status", "ok"),
-            "valid_count": int(result.get("valid_count", 0)),
-            "rejected_count": int(result.get("rejected_count", 0)),
-            "partition_date": date.today().isoformat(),
-            "path": result.get("path", ""),
-            "rejected_path": result.get("rejected_path") or "",
+            "azure_valid": result.get("azure_valid", 0),
+            "azure_rejected": result.get("azure_rejected", 0),
+            "fx_valid": result.get("fx_valid", 0),
+            "fx_skipped": str(result.get("fx_skipped", False)),
         }
     )
-    _emit_metric("dax_bronze", started)
+    _emit_metric("cloud_pricing_bronze", started)
     return result
+
+
+# NOTE: carbon_intensity_bronze — blocked on ELECTRICITY_MAPS_API_KEY (~June 2026)
+
+
+# ── Silver ────────────────────────────────────────────────────────────────────
 
 
 @asset(group_name="silver")
-def ecb_silver(
+def mlperf_silver(
     context,
     iceberg_catalog: IcebergCatalogResource,
-    ecb_bronze: dict[str, Any],
+    mlperf_bronze: dict[str, Any],
 ) -> str:
-    _ = ecb_bronze
+    """Transform MLPerf Bronze → Silver efficiency table."""
+    _ = mlperf_bronze
     started = time.perf_counter()
-    result = ecb_bronze_to_silver.run(iceberg_catalog.get_catalog())
+    result = mlperf_bronze_to_silver.run(iceberg_catalog.get_catalog())
     context.add_output_metadata(
-        {"table": result["table"], "row_count": _metadata_row_count(result)}
+        {"table": result["table"], "row_count": _row_count(result)}
     )
-    _emit_metric("ecb_silver", started)
+    _emit_metric("mlperf_silver", started)
     return str(result["table"])
 
 
 @asset(group_name="silver")
-def dax_silver(
+def cloud_pricing_silver(
     context,
     iceberg_catalog: IcebergCatalogResource,
-    dax_bronze: dict[str, Any],
+    cloud_pricing_bronze: dict[str, Any],
 ) -> str:
-    _ = dax_bronze
+    """Transform cloud GPU pricing Bronze → Silver (USD→EUR, dedup, accelerator map)."""
+    _ = cloud_pricing_bronze
     started = time.perf_counter()
-    result = dax_bronze_to_silver.run(iceberg_catalog.get_catalog())
+    result = pricing_bronze_to_silver.run(iceberg_catalog.get_catalog())
     context.add_output_metadata(
-        {"table": result["table"], "row_count": _metadata_row_count(result)}
+        {"table": result["table"], "row_count": _row_count(result)}
     )
-    _emit_metric("dax_silver", started)
+    _emit_metric("cloud_pricing_silver", started)
     return str(result["table"])
 
 
-@asset(group_name="gold")
-def gold_features(
-    context,
-    iceberg_catalog: IcebergCatalogResource,
-    ecb_silver: str,
-    dax_silver: str,
-) -> str:
-    _ = (ecb_silver, dax_silver)
-    started = time.perf_counter()
-    result = silver_to_gold_features.run(iceberg_catalog.get_catalog())
-    context.add_output_metadata(
-        {"table": result["table"], "event_count": _metadata_row_count(result)}
-    )
-    _emit_metric("gold_features", started)
-    return str(result["table"])
+# NOTE: carbon_intensity_silver — blocked on carbon_intensity_bronze
+# NOTE: ai_inference_gold — blocked on Phase H (dbt Silver→Gold, needs real data)
 
 
-@asset(group_name="ml")
-def ml_experiment(
-    context,
-    iceberg_catalog: IcebergCatalogResource,
-    pipeline_config: PipelineConfigResource,
-    gold_features: str,
-) -> str:
-    _ = gold_features
-    started = time.perf_counter()
-    best_run_id = run_experiment_set(
-        catalog=iceberg_catalog.get_catalog(),
-        mlflow_tracking_uri=pipeline_config.mlflow_tracking_uri,
-        trino_url=pipeline_config.trino_url,
-    )
-    context.add_output_metadata({"best_run_id": best_run_id})
-    _emit_metric("ml_experiment", started)
-    return best_run_id
+# ── Sensor ────────────────────────────────────────────────────────────────────
 
 
-@sensor(job_name="full_pipeline_job", minimum_interval_seconds=1800)
-def ecb_data_freshness_sensor(
+@sensor(job_name="full_pipeline_job", minimum_interval_seconds=3600 * 24)
+def mlperf_freshness_sensor(
     iceberg_catalog: IcebergCatalogResource,
 ):
+    """Trigger pipeline if MLPerf Bronze missing or older than 30 days."""
     from pyiceberg.exceptions import NoSuchTableError
 
     catalog = iceberg_catalog.get_catalog()
     latest: date | None = None
 
     try:
-        df = iceberg_io.scan_table(catalog, "bronze", "ecb_rates")
+        df = iceberg_io.scan_table(catalog, "bronze", "mlperf_benchmarks")
         if not df.empty:
             latest = pd.to_datetime(df["_ingestion_timestamp"], utc=True).max().date()
     except NoSuchTableError:
@@ -183,37 +149,49 @@ def ecb_data_freshness_sensor(
 
     if latest is None:
         return RunRequest(
-            run_key=f"ecb-freshness-init-{datetime.now(timezone.utc).isoformat()}",
-            asset_selection=[AssetKey("ecb_bronze")],
+            run_key=f"mlperf-init-{datetime.now(timezone.utc).date().isoformat()}",
+            asset_selection=[AssetKey("mlperf_bronze")],
         )
 
-    lag_hours = (datetime.now(timezone.utc).date() - latest).days * 24
-    if lag_hours >= 48:
+    lag_days = (datetime.now(timezone.utc).date() - latest).days
+    if lag_days >= 30:
         return RunRequest(
-            run_key=f"ecb-freshness-{latest.isoformat()}",
-            asset_selection=[AssetKey("ecb_bronze")],
+            run_key=f"mlperf-stale-{latest.isoformat()}",
+            asset_selection=[AssetKey("mlperf_bronze")],
         )
-    return SkipReason(
-        f"ECB data fresh enough: latest partition {latest.isoformat()} ({lag_hours}h lag)"
+    return SkipReason(f"MLPerf data fresh: latest {latest.isoformat()} ({lag_days}d ago)")
+
+
+# ── Asset checks ──────────────────────────────────────────────────────────────
+
+
+@asset_check(asset=mlperf_silver, description="mlperf_efficiency must have at least 1 row")
+def mlperf_silver_min_rows_check(
+    iceberg_catalog: IcebergCatalogResource,
+    mlperf_silver: str,
+) -> AssetCheckResult:
+    _ = mlperf_silver
+    df = iceberg_io.scan_table(iceberg_catalog.get_catalog(), "silver", "mlperf_efficiency")
+    row_count = len(df)
+    passed = row_count >= 1
+    return AssetCheckResult(
+        passed=passed,
+        description=f"mlperf_efficiency has {row_count} rows",
+        metadata={"row_count": row_count},
     )
 
 
-@asset_check(asset=gold_features, description="gold_features should contain at least 10 rows")
-def gold_features_min_rows_check(
+@asset_check(asset=cloud_pricing_silver, description="cloud_gpu_pricing must have at least 1 row")
+def cloud_pricing_silver_min_rows_check(
     iceberg_catalog: IcebergCatalogResource,
-    gold_features: str,
+    cloud_pricing_silver: str,
 ) -> AssetCheckResult:
-    _ = gold_features
-    catalog = iceberg_catalog.get_catalog()
-    gold_df = iceberg_io.scan_table(catalog, "gold", "ecb_dax_features")
-    row_count = int(len(gold_df.index))
-    passed = row_count >= 10
+    _ = cloud_pricing_silver
+    df = iceberg_io.scan_table(iceberg_catalog.get_catalog(), "silver", "cloud_gpu_pricing")
+    row_count = len(df)
+    passed = row_count >= 1
     return AssetCheckResult(
         passed=passed,
-        description=(
-            "gold_features has enough event rows for event-study modeling"
-            if passed
-            else "gold_features has fewer than 10 rows"
-        ),
+        description=f"cloud_gpu_pricing has {row_count} rows",
         metadata={"row_count": row_count},
     )

@@ -42,7 +42,7 @@ class BronzeWriter:
         self.catalog = catalog
         self.bucket = bucket or get_data_bucket()  # kept for observability logging
 
-    def write(self, df: pd.DataFrame, source: str, ingestion_date: str | None = None) -> str:
+    def write(self, df: pd.DataFrame, source: str) -> str:
         """Append *df* to the Bronze Iceberg table for *source* and return a logical path."""
         schema, partition_spec = _BRONZE_TABLE_META.get(source, (BRONZE_CARBON_INTENSITY_SCHEMA, None))
 
@@ -62,7 +62,6 @@ class BronzeWriter:
         self,
         records: list[dict[str, Any]],
         source: str,
-        ingestion_date: str | None = None,
     ) -> str | None:
         """Append rejected records to the Bronze rejected Iceberg table."""
         if not records:

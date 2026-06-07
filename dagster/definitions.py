@@ -1,4 +1,4 @@
-"""Dagster definitions for the SoloLakehouse v2.5 runtime."""
+"""Dagster definitions for SoloDShouse AI energy cost domain."""
 
 from __future__ import annotations
 
@@ -12,48 +12,45 @@ if THIS_DIR not in sys.path:
     sys.path.insert(0, THIS_DIR)
 
 from assets import (  # noqa: E402
-    dax_bronze,
-    dax_silver,
-    ecb_bronze,
-    ecb_data_freshness_sensor,
-    ecb_silver,
-    gold_features,
-    gold_features_min_rows_check,
-    ml_experiment,
+    cloud_pricing_bronze,
+    cloud_pricing_silver,
+    cloud_pricing_silver_min_rows_check,
+    mlperf_bronze,
+    mlperf_freshness_sensor,
+    mlperf_silver,
+    mlperf_silver_min_rows_check,
 )
-from io_managers import ParquetIOManager  # noqa: E402
-from resources import IcebergCatalogResource, MinioResource, PipelineConfigResource  # noqa: E402
+from resources import IcebergCatalogResource, PipelineConfigResource  # noqa: E402
 
-data_flow_assets = [ecb_bronze, dax_bronze, ecb_silver, dax_silver, gold_features]
-all_assets = [*data_flow_assets, ml_experiment]
+bronze_assets = [mlperf_bronze, cloud_pricing_bronze]
+silver_assets = [mlperf_silver, cloud_pricing_silver]
+all_assets = [*bronze_assets, *silver_assets]
 
 full_pipeline_job = define_asset_job(
     name="full_pipeline_job",
     selection=AssetSelection.assets(*all_assets),
 )
 
-demo_data_flow_job = define_asset_job(
-    name="demo_data_flow_job",
-    selection=AssetSelection.assets(*data_flow_assets),
+bronze_only_job = define_asset_job(
+    name="bronze_only_job",
+    selection=AssetSelection.assets(*bronze_assets),
 )
 
 daily_pipeline_schedule = ScheduleDefinition(
     name="daily_pipeline_schedule",
     job=full_pipeline_job,
-    cron_schedule="0 6 * * 1-5",
+    cron_schedule="0 7 * * *",
     execution_timezone="UTC",
 )
 
 defs = Definitions(
     assets=all_assets,
-    asset_checks=[gold_features_min_rows_check],
-    jobs=[full_pipeline_job, demo_data_flow_job],
+    asset_checks=[mlperf_silver_min_rows_check, cloud_pricing_silver_min_rows_check],
+    jobs=[full_pipeline_job, bronze_only_job],
     schedules=[daily_pipeline_schedule],
-    sensors=[ecb_data_freshness_sensor],
+    sensors=[mlperf_freshness_sensor],
     resources={
-        "minio": MinioResource(),
         "pipeline_config": PipelineConfigResource(),
         "iceberg_catalog": IcebergCatalogResource(),
-        "parquet_io_manager": ParquetIOManager(),
     },
 )
