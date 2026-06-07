@@ -26,6 +26,7 @@ import structlog
 
 from ingestion.bronze_writer import BronzeWriter
 from ingestion.exceptions import CollectorUnavailableError
+from ingestion.http import make_session
 from ingestion.schema.mlperf_records import MLPerfRecord
 
 if TYPE_CHECKING:
@@ -62,7 +63,7 @@ class MLPerfCollector:
 
     def _fetch_data(self, csv_url: str) -> pd.DataFrame:
         try:
-            resp = requests.get(csv_url, timeout=30)
+            resp = make_session().get(csv_url, timeout=30)
             resp.raise_for_status()
         except requests.RequestException as exc:
             raise CollectorUnavailableError(f"MLPerf CSV fetch failed: {exc}") from exc

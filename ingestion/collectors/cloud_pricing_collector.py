@@ -19,6 +19,7 @@ import structlog
 
 from ingestion.bronze_writer import BronzeWriter
 from ingestion.exceptions import CollectorUnavailableError
+from ingestion.http import make_session
 from ingestion.schema.pricing_records import CloudPricingRecord, FXRecord
 
 if TYPE_CHECKING:
@@ -49,10 +50,11 @@ class CloudPricingCollector:
         params: dict = {"$filter": filter_expr, "api-version": "2023-01-01-preview"}
         rows: list[dict] = []
 
+        session = make_session()
         url: str | None = _AZURE_PRICES_URL
         while url:
             try:
-                resp = requests.get(url, params=params, timeout=30)
+                resp = session.get(url, params=params, timeout=30)
                 resp.raise_for_status()
             except requests.RequestException as exc:
                 raise CollectorUnavailableError(f"Azure Prices API failed: {exc}") from exc
@@ -104,7 +106,7 @@ class CloudPricingCollector:
             "limit": 365,
         }
         try:
-            resp = requests.get(_FRED_URL, params=params, timeout=30)
+            resp = make_session().get(_FRED_URL, params=params, timeout=30)
             resp.raise_for_status()
         except requests.RequestException as exc:
             raise CollectorUnavailableError(f"FRED API failed: {exc}") from exc

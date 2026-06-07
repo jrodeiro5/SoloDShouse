@@ -13,6 +13,13 @@ class MLPerfRecord(BaseModel):
     scenario: str | None = None
     tokens_per_sec: float
 
+    @field_validator("model_name", "accelerator")
+    @classmethod
+    def non_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("must not be empty")
+        return v
+
     @field_validator("tokens_per_sec")
     @classmethod
     def positive(cls, v: float) -> float:
