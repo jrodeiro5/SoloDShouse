@@ -42,64 +42,105 @@ Runs on a Mac Studio M4 Max (64 GB) for development and a €5/month Hetzner VPS
 
 ## Platform Architecture
 
+### Capability Layers
+
+```mermaid
+block-beta
+  columns 1
+
+  block:agent["🤖 LAYER 3 — AI AGENT"]:1
+    columns 3
+    deepagents["deepagents\n(LangGraph)"]
+    openwebui["Open WebUI\nChat UI"]
+    tooluniv["ToolUniverse\n1000+ MCP tools"]
+    litellm["LiteLLM Gateway → llama.cpp / vLLM (Mac) · Groq API (VPS)"]:3
+    langfuse["Langfuse\nLLM traces"]
+    mem0["mem0\nAgent memory"]
+    kotaemon["kotaemon\nRAG + citations"]
+  end
+
+  block:ml["📊 LAYER 2 — ML & ANALYTICS"]:1
+    columns 3
+    mlflow["MLflow 3.x\nExperiment tracking"]
+    bentoml["BentoML\nModel serving"]
+    evidence["Evidence.dev\nBI dashboards"]
+    models["XGBoost · LightGBM · LSTM  ·  AI inference cost model"]:3
+  end
+
+  block:lake["🏛️ LAYER 1 — LAKEHOUSE"]:1
+    columns 3
+    dagster["Dagster\nOrchestration"]
+    dbt["dbt + DuckDB\nTransformations"]
+    trino["Trino\nFederated SQL"]
+    iceberg["Apache Iceberg  ·  SeaweedFS (S3)  ·  Hive Metastore  ·  PostgreSQL 17 + pgvector"]:3
+  end
+
+  agent --> ml
+  ml --> lake
 ```
-╔══════════════════════════════════════════════════════════════════════╗
-║  LAYER 3 — AI AGENT                                                  ║
-║                                                                      ║
-║  ┌─────────────────┐  ┌──────────────┐  ┌──────────────────────┐   ║
-║  │  deepagents     │  │  Open WebUI  │  │  ToolUniverse (MCP)  │   ║
-║  │  (LangGraph)    │  │  Chat UI     │  │  1000+ sci tools     │   ║
-║  └────────┬────────┘  └──────┬───────┘  └──────────┬───────────┘   ║
-║           │                  │                      │               ║
-║  ┌────────▼──────────────────▼──────────────────────▼───────────┐  ║
-║  │  LiteLLM Gateway  →  llama.cpp / vLLM (Mac) / Groq (VPS)    │  ║
-║  └───────────────────────────────────────────────────────────────┘  ║
-║  ┌────────────────┐  ┌───────────────┐  ┌────────────────────┐     ║
-║  │  Langfuse      │  │  mem0 memory  │  │  kotaemon (RAG)    │     ║
-║  │  LLM traces    │  │               │  │  PDF + citations   │     ║
-║  └────────────────┘  └───────────────┘  └────────────────────┘     ║
-╠══════════════════════════════════════════════════════════════════════╣
-║  LAYER 2 — ML & ANALYTICS                                            ║
-║                                                                      ║
-║  ┌───────────────┐  ┌────────────────┐  ┌──────────────────────┐   ║
-║  │  MLflow 3.x   │  │  BentoML       │  │  Evidence.dev BI     │   ║
-║  │  Experiments  │  │  Model serving │  │  Markdown-first      │   ║
-║  └───────────────┘  └────────────────┘  └──────────────────────┘   ║
-║                                                                      ║
-║  Models: XGBoost · LightGBM · LSTM (energy forecast)               ║
-║          AI inference cost model (MLPerf + Azure GPU pricing)       ║
-╠══════════════════════════════════════════════════════════════════════╣
-║  LAYER 1 — LAKEHOUSE (MEDALLION)                                     ║
-║                                                                      ║
-║  External Sources                                                    ║
-║  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐     ║
-║  │  ENTSO-E     │  │  MLCommons   │  │  Azure Retail Prices  │     ║
-║  │  Energy API  │  │  MLPerf CSV  │  │  FRED FX Rates        │     ║
-║  └──────┬───────┘  └──────┬───────┘  └──────────┬────────────┘     ║
-║         │                 │                      │                  ║
-║         ▼                 ▼                      ▼                  ║
-║  ┌─────────────────────────────────────────────────────────────┐    ║
-║  │  BRONZE  (append-only Iceberg, day-partitioned)             │    ║
-║  │  entsoe_generation · mlperf_benchmarks · cloud_gpu_pricing  │    ║
-║  └──────────────────────────┬──────────────────────────────────┘    ║
-║                             │  Dagster SDAs                         ║
-║                             ▼                                       ║
-║  ┌─────────────────────────────────────────────────────────────┐    ║
-║  │  SILVER  (cleaned, typed, deduped — full overwrite)         │    ║
-║  │  mlperf_efficiency · cloud_gpu_pricing                      │    ║
-║  └──────────────────────────┬──────────────────────────────────┘    ║
-║                             │  dbt + MetricFlow                     ║
-║                             ▼                                       ║
-║  ┌─────────────────────────────────────────────────────────────┐    ║
-║  │  GOLD  (ML-ready features — DuckDB queryable)               │    ║
-║  │  ai_inference_cost · energy_forecast_features               │    ║
-║  └─────────────────────────────────────────────────────────────┘    ║
-║                                                                      ║
-║  Storage: SeaweedFS (S3-compatible)  ·  Catalog: Hive Metastore     ║
-║  Query:   Trino (federated SQL)      ·  DuckDB (local / agent path) ║
-║  DB:      PostgreSQL 17 + pgvector + PostGIS                        ║
-╚══════════════════════════════════════════════════════════════════════╝
+
+### Data Pipeline
+
+```mermaid
+flowchart TD
+    subgraph src["External Sources"]
+        E["⚡ ENTSO-E\nEuropean grid API"]
+        M["🏆 MLCommons\nMLPerf benchmarks"]
+        A["☁️ Azure Retail\nGPU pricing API"]
+        F["💱 FRED\nFX rates"]
+        W["🌤️ Open-Meteo\nWeather"]
+    end
+
+    subgraph bronze["🥉 Bronze — Iceberg (append-only, day-partitioned)"]
+        B1["entsoe_generation"]
+        B2["mlperf_benchmarks"]
+        B3["cloud_gpu_pricing"]
+        B4["fx_rates"]
+        BR["rejected_records"]
+    end
+
+    subgraph silver["🥈 Silver — Iceberg (cleaned, typed, deduped)"]
+        S1["mlperf_efficiency\n(tokens/s, Wh/M tokens)"]
+        S2["cloud_gpu_pricing\n(EUR-normalised, deduped)"]
+        S3["grid_carbon_intensity\n(gCO₂/kWh by fuel mix)"]
+    end
+
+    subgraph gold["🥇 Gold — DuckDB queryable via dbt + MetricFlow"]
+        G1["ai_inference_cost\n(€/M tokens + carbon)"]
+        G2["energy_forecast_features\n(ML feature matrix)"]
+    end
+
+    subgraph consume["Consumers"]
+        ML["MLflow → BentoML\nForecasting models"]
+        AG["deepagents\nNL queries over Gold"]
+        BI["Evidence.dev\nBI dashboards"]
+    end
+
+    E -->|ENTSOECollector| B1
+    M -->|MLPerfCollector| B2
+    A -->|CloudPricingCollector| B3
+    F -->|CloudPricingCollector| B4
+    W -.->|planned| B1
+
+    B2 -->|Dagster SDA| S1
+    B3 & B4 -->|Dagster SDA| S2
+    B1 -.->|planned| S3
+
+    S1 & S2 -->|dbt| G1
+    S3 -.->|planned| G2
+
+    G1 & G2 --> ML
+    G1 & G2 --> AG
+    G1 & G2 --> BI
+
+    style bronze fill:#cd7f32,color:#fff,stroke:#a0522d
+    style silver fill:#c0c0c0,color:#000,stroke:#999
+    style gold fill:#ffd700,color:#000,stroke:#b8860b
+    style consume fill:#e8f4f8,stroke:#4a90d9
+    style src fill:#f0f8e8,stroke:#5a9a3a
 ```
+
+> Dashed arrows = planned (blocked on ENTSO-E API key + Phase H dbt scaffold)
 
 ---
 
