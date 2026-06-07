@@ -83,7 +83,7 @@ def align_role_password_via_docker(*, user: str, password: str) -> None:
         [
             "docker",
             "exec",
-            "slh-postgres",
+            "sds-postgres",
             "psql",
             "-U",
             user,
@@ -152,7 +152,7 @@ def ensure_databases_via_docker(user: str) -> list[str] | None:
             [
                 "docker",
                 "exec",
-                "slh-postgres",
+                "sds-postgres",
                 "psql",
                 "-U",
                 user,
@@ -178,7 +178,7 @@ def ensure_databases_via_docker(user: str) -> list[str] | None:
             [
                 "docker",
                 "exec",
-                "slh-postgres",
+                "sds-postgres",
                 "psql",
                 "-U",
                 user,

@@ -21,7 +21,7 @@ purge-legacy-docker-volumes:
 wait-postgres-ready:
 	@echo "Waiting for PostgreSQL to accept connections..."
 	@for i in $$(seq 1 90); do \
-		docker exec slh-postgres sh -c 'pg_isready -U "$$POSTGRES_USER" -d postgres' >/dev/null 2>&1 && exit 0; \
+		docker exec sds-postgres sh -c 'pg_isready -U "$$POSTGRES_USER" -d postgres' >/dev/null 2>&1 && exit 0; \
 		sleep 1; \
 	done; \
 	echo "Postgres did not become ready in time."; exit 1
@@ -30,15 +30,16 @@ init-iceberg:
 	$(PYTHON) scripts/init-iceberg-namespaces.py
 
 up: prepare-data-dirs
-	$(DOCKER_COMPOSE) $(COMPOSE_STACK) up -d postgres minio
+	$(DOCKER_COMPOSE) $(COMPOSE_STACK) up -d postgres seaweedfs
 	$(MAKE) wait-postgres-ready
 	$(MAKE) bootstrap-db
 	$(DOCKER_COMPOSE) $(COMPOSE_STACK) up -d --build
 	$(MAKE) wait
+	sh scripts/init-seaweedfs.sh
 	$(MAKE) init-iceberg
 	@echo ""
-	@echo "SoloLakehouse is ready."
-	@echo "  MinIO Console:  http://localhost:9001"
+	@echo "SoloDShouse is ready."
+	@echo "  SeaweedFS S3:   http://localhost:8333"
 	@echo "  Trino UI:       http://localhost:8080"
 	@echo "  MLflow UI:      http://localhost:5000"
 	@echo "  Dagster UI:     http://localhost:3000"
@@ -62,7 +63,7 @@ down:
 
 clean:
 	$(DOCKER_COMPOSE) $(COMPOSE_STACK) down --remove-orphans
-	rm -rf docker/data/minio docker/data/postgres docker/data/dagster docker/data/om-mysql docker/data/om-elasticsearch
+	rm -rf docker/data/seaweedfs docker/data/postgres docker/data/dagster docker/data/om-mysql docker/data/om-elasticsearch
 	$(MAKE) prepare-data-dirs
 	$(MAKE) purge-legacy-docker-volumes
 

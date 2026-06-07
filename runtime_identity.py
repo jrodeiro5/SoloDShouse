@@ -7,11 +7,11 @@ import re
 from dataclasses import asdict, dataclass
 from typing import Mapping
 
-DEFAULT_PRODUCT_ID = "sololakehouse"
-DEFAULT_DISPLAY_NAME = "SoloLakehouse"
-DEFAULT_DOMAIN = "financial_markets"
+DEFAULT_PRODUCT_ID = "solodshouse"
+DEFAULT_DISPLAY_NAME = "SoloDShouse"
+DEFAULT_DOMAIN = "energy_ai_cost"
 DEFAULT_ENVIRONMENT = "local"
-DEFAULT_RUNTIME_VERSION = "slh-v2.5.1"
+DEFAULT_RUNTIME_VERSION = "sds-v0.1.0"
 
 
 @dataclass(frozen=True)
@@ -33,7 +33,7 @@ class RuntimeIdentity:
 def get_runtime_identity(environ: Mapping[str, str] | None = None) -> RuntimeIdentity:
     """Resolve product/runtime identity from environment variables.
 
-    Defaults preserve the v2.5 SoloLakehouse local reference behavior.
+    Defaults reflect SoloDShouse identity.
     """
     env = os.environ if environ is None else environ
     product_id = _env(env, "PRODUCT_ID", DEFAULT_PRODUCT_ID).lower()

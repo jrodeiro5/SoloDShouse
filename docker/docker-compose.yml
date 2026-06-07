@@ -1,44 +1,23 @@
 services:
-  minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    container_name: slh-minio
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    command: server /data --console-address ":9001"
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    container_name: sds-seaweedfs
+    command: server -s3 -s3.port=8333 -master.port=9333 -volume.port=9334
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "8333:8333"
+      - "9333:9333"
     volumes:
-      - ./data/minio:/data
+      - ./data/seaweedfs:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://localhost:8333/"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
-
-  minio-init:
-    image: minio/mc:latest
-    container_name: slh-minio-init
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: ["/bin/sh", "/init-minio.sh"]
-    volumes:
-      - ../scripts/init-minio.sh:/init-minio.sh:ro
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      DATA_BUCKET: ${DATA_BUCKET:-}
-      BUCKET_NAME: ${BUCKET_NAME:-sololakehouse}
-      AUDIT_BUCKET: ${AUDIT_BUCKET:-}
-      MLFLOW_ARTIFACT_BUCKET: ${MLFLOW_ARTIFACT_BUCKET:-}
-    restart: "no"
+      start_period: 15s
 
   postgres:
-    image: postgres:17
-    container_name: slh-postgres
+    image: pgvector/pgvector:pg17
+    container_name: sds-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -56,22 +35,21 @@ services:
 
   hive-metastore:
     build: ./hive-metastore
-    container_name: slh-hive-metastore
+    container_name: sds-hive-metastore
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
+      seaweedfs:
         condition: service_healthy
     environment:
       DB_HOST: postgres
       DB_USER: ${POSTGRES_USER}
       DB_PASS: ${POSTGRES_PASSWORD}
-      S3_ENDPOINT: ${S3_ENDPOINT}
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-      S3_SECRET_KEY: ${S3_SECRET_KEY}
-      DATA_BUCKET: ${DATA_BUCKET:-}
-      BUCKET_NAME: ${BUCKET_NAME:-sololakehouse}
-      WAREHOUSE_URI: ${WAREHOUSE_URI:-}
+      S3_ENDPOINT: http://seaweedfs:8333
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-solodshouse}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-solodshouse123}
+      DATA_BUCKET: ${DATA_BUCKET:-solodshouse-data}
+      WAREHOUSE_URI: ${WAREHOUSE_URI:-s3a://solodshouse-data/warehouse/}
     ports:
       - "9083:9083"
     healthcheck:
@@ -83,16 +61,16 @@ services:
 
   trino:
     image: trinodb/trino:480
-    container_name: slh-trino
+    container_name: sds-trino
     user: "0"
     depends_on:
       hive-metastore:
         condition: service_healthy
-      minio:
+      seaweedfs:
         condition: service_healthy
     environment:
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-solodshouse}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-solodshouse123}
     ports:
       - "8080:8080"
     volumes:
@@ -109,25 +87,22 @@ services:
 
   mlflow:
     build: ./mlflow
-    container_name: slh-mlflow
+    container_name: sds-mlflow
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
+      seaweedfs:
         condition: service_healthy
-      minio-init:
-        condition: service_completed_successfully
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      MLFLOW_S3_ENDPOINT_URL: ${MLFLOW_S3_ENDPOINT_URL}
-      DATA_BUCKET: ${DATA_BUCKET:-}
-      BUCKET_NAME: ${BUCKET_NAME:-sololakehouse}
-      MLFLOW_ARTIFACT_BUCKET: ${MLFLOW_ARTIFACT_BUCKET:-}
+      MLFLOW_S3_ENDPOINT_URL: http://seaweedfs:8333
+      DATA_BUCKET: ${DATA_BUCKET:-solodshouse-data}
+      MLFLOW_ARTIFACT_BUCKET: ${MLFLOW_ARTIFACT_BUCKET:-solodshouse-mlflow}
       MLFLOW_ARTIFACT_ROOT: ${MLFLOW_ARTIFACT_ROOT:-}
-      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
-      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-solodshouse}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-solodshouse123}
     ports:
       - "5000:5000"
     healthcheck:
@@ -141,11 +116,11 @@ services:
     build:
       context: ..
       dockerfile: docker/dagster/Dockerfile
-    container_name: slh-dagster-webserver
+    container_name: sds-dagster-webserver
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
+      seaweedfs:
         condition: service_healthy
       trino:
         condition: service_healthy
@@ -153,25 +128,24 @@ services:
         condition: service_healthy
     environment:
       HIVE_METASTORE_URI: thrift://hive-metastore:9083
-      PRODUCT_ID: ${PRODUCT_ID:-sololakehouse}
-      PRODUCT_DISPLAY_NAME: ${PRODUCT_DISPLAY_NAME:-SoloLakehouse}
-      PRODUCT_DOMAIN: ${PRODUCT_DOMAIN:-financial_markets}
+      PRODUCT_ID: ${PRODUCT_ID:-solodshouse}
+      PRODUCT_DISPLAY_NAME: ${PRODUCT_DISPLAY_NAME:-SoloDShouse}
+      PRODUCT_DOMAIN: ${PRODUCT_DOMAIN:-energy_ai_cost}
       ENVIRONMENT: ${ENVIRONMENT:-local}
-      RUNTIME_VERSION: ${RUNTIME_VERSION:-slh-v2.5.1}
-      MINIO_ENDPOINT: minio:9000
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      RUNTIME_VERSION: ${RUNTIME_VERSION:-sds-v0.1.0}
+      OBJECT_STORE_ENDPOINT: http://seaweedfs:8333
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-solodshouse}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-solodshouse123}
       MLFLOW_TRACKING_URI: http://mlflow:5000
-      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
-      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
-      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
-      DATA_BUCKET: ${DATA_BUCKET:-}
-      BUCKET_NAME: ${BUCKET_NAME:-sololakehouse}
+      MLFLOW_S3_ENDPOINT_URL: http://seaweedfs:8333
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-solodshouse}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-solodshouse123}
+      DATA_BUCKET: ${DATA_BUCKET:-solodshouse-data}
       AUDIT_BUCKET: ${AUDIT_BUCKET:-}
-      MLFLOW_ARTIFACT_BUCKET: ${MLFLOW_ARTIFACT_BUCKET:-}
+      MLFLOW_ARTIFACT_BUCKET: ${MLFLOW_ARTIFACT_BUCKET:-solodshouse-mlflow}
       MLFLOW_ARTIFACT_ROOT: ${MLFLOW_ARTIFACT_ROOT:-}
-      WAREHOUSE_URI: ${WAREHOUSE_URI:-}
-      TRINO_USER: ${TRINO_USER:-}
+      WAREHOUSE_URI: ${WAREHOUSE_URI:-s3a://solodshouse-data/warehouse/}
+      TRINO_USER: ${TRINO_USER:-solodshouse}
       TRINO_URL: http://trino:8080
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -192,11 +166,11 @@ services:
     build:
       context: ..
       dockerfile: docker/dagster/Dockerfile
-    container_name: slh-dagster-daemon
+    container_name: sds-dagster-daemon
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
+      seaweedfs:
         condition: service_healthy
       trino:
         condition: service_healthy
@@ -206,25 +180,24 @@ services:
         condition: service_healthy
     environment:
       HIVE_METASTORE_URI: thrift://hive-metastore:9083
-      PRODUCT_ID: ${PRODUCT_ID:-sololakehouse}
-      PRODUCT_DISPLAY_NAME: ${PRODUCT_DISPLAY_NAME:-SoloLakehouse}
-      PRODUCT_DOMAIN: ${PRODUCT_DOMAIN:-financial_markets}
+      PRODUCT_ID: ${PRODUCT_ID:-solodshouse}
+      PRODUCT_DISPLAY_NAME: ${PRODUCT_DISPLAY_NAME:-SoloDShouse}
+      PRODUCT_DOMAIN: ${PRODUCT_DOMAIN:-energy_ai_cost}
       ENVIRONMENT: ${ENVIRONMENT:-local}
-      RUNTIME_VERSION: ${RUNTIME_VERSION:-slh-v2.5.1}
-      MINIO_ENDPOINT: minio:9000
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      RUNTIME_VERSION: ${RUNTIME_VERSION:-sds-v0.1.0}
+      OBJECT_STORE_ENDPOINT: http://seaweedfs:8333
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-solodshouse}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-solodshouse123}
       MLFLOW_TRACKING_URI: http://mlflow:5000
-      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
-      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
-      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
-      DATA_BUCKET: ${DATA_BUCKET:-}
-      BUCKET_NAME: ${BUCKET_NAME:-sololakehouse}
+      MLFLOW_S3_ENDPOINT_URL: http://seaweedfs:8333
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-solodshouse}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-solodshouse123}
+      DATA_BUCKET: ${DATA_BUCKET:-solodshouse-data}
       AUDIT_BUCKET: ${AUDIT_BUCKET:-}
-      MLFLOW_ARTIFACT_BUCKET: ${MLFLOW_ARTIFACT_BUCKET:-}
+      MLFLOW_ARTIFACT_BUCKET: ${MLFLOW_ARTIFACT_BUCKET:-solodshouse-mlflow}
       MLFLOW_ARTIFACT_ROOT: ${MLFLOW_ARTIFACT_ROOT:-}
-      WAREHOUSE_URI: ${WAREHOUSE_URI:-}
-      TRINO_USER: ${TRINO_USER:-}
+      WAREHOUSE_URI: ${WAREHOUSE_URI:-s3a://solodshouse-data/warehouse/}
+      TRINO_USER: ${TRINO_USER:-solodshouse}
       TRINO_URL: http://trino:8080
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}

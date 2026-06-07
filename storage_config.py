@@ -6,8 +6,8 @@ import os
 from dataclasses import asdict, dataclass
 from typing import Mapping
 
-DEFAULT_DATA_BUCKET = "sololakehouse"
-DEFAULT_MLFLOW_ARTIFACT_BUCKET = "mlflow-artifacts"
+DEFAULT_DATA_BUCKET = "solodshouse-data"
+DEFAULT_MLFLOW_ARTIFACT_BUCKET = "solodshouse-mlflow"
 DEFAULT_WAREHOUSE_PREFIX = "warehouse"
 
 
@@ -28,8 +28,7 @@ class StorageConfig:
 def get_storage_config(environ: Mapping[str, str] | None = None) -> StorageConfig:
     """Resolve storage locations from environment variables.
 
-    `DATA_BUCKET` is the entity-level setting. `BUCKET_NAME` remains supported
-    for v2.5 compatibility while existing deployments migrate.
+    `DATA_BUCKET` is the primary setting. `BUCKET_NAME` accepted as fallback.
     """
     env = os.environ if environ is None else environ
     data_bucket = _env(env, "DATA_BUCKET", _env(env, "BUCKET_NAME", DEFAULT_DATA_BUCKET))

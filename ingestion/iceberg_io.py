@@ -1,9 +1,9 @@
-"""PyIceberg I/O helpers for the SoloLakehouse medallion layers.
+"""PyIceberg I/O helpers for the SoloDShouse medallion layers.
 
 All pipeline writes go through `append_table` (Bronze) or `overwrite_table`
 (Silver / Gold).  `scan_table` is used by transformations and freshness checks.
 Callers inject a `Catalog` so tests can pass a mock without touching
-Hive Metastore or MinIO.
+Hive Metastore or SeaweedFS.
 """
 
 from __future__ import annotations
@@ -51,15 +51,15 @@ def get_catalog(
     access_key: str | None = None,
     secret_key: str | None = None,
 ) -> "Catalog":
-    """Create a HiveCatalog backed by Hive Metastore and MinIO (S3-compatible).
+    """Create a HiveCatalog backed by Hive Metastore and SeaweedFS (S3-compatible).
 
     All parameters fall back to environment variables so Docker and local-dev
     environments work without extra configuration.
     """
     from pyiceberg.catalog.hive import HiveCatalog
 
-    minio_ep = os.environ.get("MINIO_ENDPOINT", "localhost:9000")
-    data_bucket = os.environ.get("DATA_BUCKET", os.environ.get("BUCKET_NAME", "sololakehouse"))
+    store_ep = os.environ.get("OBJECT_STORE_ENDPOINT", "http://localhost:8333")
+    data_bucket = os.environ.get("DATA_BUCKET", os.environ.get("BUCKET_NAME", "solodshouse-data"))
     # WAREHOUSE_URI is s3a:// for Hadoop; pyiceberg uses s3://
     raw_warehouse = os.environ.get("WAREHOUSE_URI", f"s3://{data_bucket}/warehouse/")
     effective_warehouse = raw_warehouse.replace("s3a://", "s3://")
@@ -67,9 +67,9 @@ def get_catalog(
     props: dict[str, str] = {
         "uri": uri or os.environ.get("HIVE_METASTORE_URI", "thrift://localhost:9083"),
         "warehouse": warehouse or effective_warehouse,
-        "s3.endpoint": s3_endpoint or f"http://{minio_ep}",
-        "s3.access-key-id": access_key or os.environ.get("S3_ACCESS_KEY", "sololakehouse"),
-        "s3.secret-access-key": secret_key or os.environ.get("S3_SECRET_KEY", "sololakehouse123"),
+        "s3.endpoint": s3_endpoint or store_ep,
+        "s3.access-key-id": access_key or os.environ.get("S3_ACCESS_KEY", os.environ.get("OBJECT_STORE_ACCESS_KEY", "solodshouse")),
+        "s3.secret-access-key": secret_key or os.environ.get("S3_SECRET_KEY", os.environ.get("OBJECT_STORE_SECRET_KEY", "solodshouse123")),
         "s3.path-style-access": "true",
     }
     return HiveCatalog(name, **props)

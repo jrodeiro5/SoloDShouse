@@ -93,7 +93,7 @@ verify_setup = load_verify_setup_module()
 def collect_statuses() -> list[StatusTuple]:
     verify_setup.load_dotenv_if_present()
     checks = [
-        verify_setup.check_minio,
+        verify_setup.check_seaweedfs,
         verify_setup.check_postgres,
         verify_setup.check_hive_metastore,
         verify_setup.check_trino,
@@ -112,7 +112,7 @@ def resolve_service_links() -> list[dict[str, str]]:
             "label": "Object Store",
             "url": _env_url(
                 "OBJECT_STORE_CONSOLE_URL",
-                _env("MINIO_CONSOLE_URL", "http://localhost:9001"),
+                _env("OBJECT_STORE_CONSOLE_URL", "http://localhost:8333"),
             ),
             "detail": "S3-compatible object store console",
         },

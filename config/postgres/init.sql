@@ -1,3 +1,7 @@
 CREATE DATABASE hive_metastore;
 CREATE DATABASE mlflow;
 CREATE DATABASE dagster_storage;
+
+\c postgres
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS postgis;

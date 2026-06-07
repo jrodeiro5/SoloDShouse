@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import os
 import uuid
-from io import BytesIO
 from pathlib import Path
 
-import pandas as pd
+import boto3
 import pytest
-from minio import Minio
+from botocore.config import Config
 
 from ingestion.iceberg_io import get_catalog
 
@@ -29,21 +28,24 @@ def load_dotenv_if_present() -> None:
 
 
 @pytest.fixture(scope="session")
-def minio_client() -> Minio:
+def s3_client():
     load_dotenv_if_present()
-    endpoint = os.environ.get("MINIO_ENDPOINT", "localhost:9000")
-    endpoint = endpoint.replace("http://", "").replace("https://", "").rstrip("/")
-    access_key = os.environ.get("S3_ACCESS_KEY", os.environ.get("MINIO_ROOT_USER", "sololakehouse"))
-    secret_key = os.environ.get(
-        "S3_SECRET_KEY",
-        os.environ.get("MINIO_ROOT_PASSWORD", "sololakehouse123"),
-    )
+    endpoint = os.environ.get("OBJECT_STORE_ENDPOINT", "http://localhost:8333")
+    access_key = os.environ.get("S3_ACCESS_KEY", os.environ.get("OBJECT_STORE_ACCESS_KEY", "solodshouse"))
+    secret_key = os.environ.get("S3_SECRET_KEY", os.environ.get("OBJECT_STORE_SECRET_KEY", "solodshouse123"))
 
-    client = Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=False)
+    client = boto3.client(
+        "s3",
+        endpoint_url=endpoint,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        config=Config(signature_version="s3v4"),
+        region_name="us-east-1",
+    )
     try:
         client.list_buckets()
     except Exception as exc:
-        pytest.skip(f"MinIO unreachable for integration tests: {exc}")
+        pytest.skip(f"SeaweedFS S3 unreachable for integration tests: {exc}")
     return client
 
 
@@ -59,21 +61,14 @@ def iceberg_catalog():
 
 
 @pytest.fixture(scope="session")
-def test_bucket(minio_client: Minio) -> str:
-    bucket_name = f"sololakehouse-test-{uuid.uuid4().hex[:8]}"
-    minio_client.make_bucket(bucket_name)
+def test_bucket(s3_client) -> str:
+    bucket_name = f"solodshouse-test-{uuid.uuid4().hex[:8]}"
+    s3_client.create_bucket(Bucket=bucket_name)
     try:
         yield bucket_name
     finally:
-        for obj in minio_client.list_objects(bucket_name, recursive=True):
-            minio_client.remove_object(bucket_name, obj.object_name)
-        minio_client.remove_bucket(bucket_name)
-
-
-def read_parquet_from_minio(minio_client: Minio, bucket: str, path: str) -> pd.DataFrame:
-    response = minio_client.get_object(bucket, path)
-    try:
-        return pd.read_parquet(BytesIO(response.read()))
-    finally:
-        response.close()
-        response.release_conn()
+        paginator = s3_client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=bucket_name):
+            for obj in page.get("Contents", []):
+                s3_client.delete_object(Bucket=bucket_name, Key=obj["Key"])
+        s3_client.delete_bucket(Bucket=bucket_name)

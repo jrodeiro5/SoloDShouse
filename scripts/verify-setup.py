@@ -10,7 +10,6 @@ from pathlib import Path
 
 import psycopg2
 import requests
-from minio import Minio
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -39,48 +38,21 @@ def load_dotenv_if_present() -> None:
             os.environ[key] = value
 
 
-def _minio_base_url(endpoint: str) -> str:
-    if endpoint.startswith("http://") or endpoint.startswith("https://"):
-        return endpoint.rstrip("/")
-    return f"http://{endpoint}".rstrip("/")
-
-
-def check_minio() -> StatusTuple:
-    endpoint = os.environ.get("MINIO_ENDPOINT", "localhost:9000")
-    health_url = f"{_minio_base_url(endpoint)}/minio/health/live"
-    minio_endpoint = endpoint.replace("http://", "").replace("https://", "").rstrip("/")
+def check_seaweedfs() -> StatusTuple:
+    endpoint = os.environ.get("OBJECT_STORE_ENDPOINT", "http://localhost:8333")
+    if not endpoint.startswith("http"):
+        endpoint = f"http://{endpoint}"
+    endpoint = endpoint.rstrip("/")
 
     try:
-        response = requests.get(health_url, timeout=5)
-        if response.status_code != 200:
-            return ("MinIO", "FAIL", f"Health endpoint returned HTTP {response.status_code}")
-
-        access_key = os.environ.get(
-            "S3_ACCESS_KEY",
-            os.environ.get("MINIO_ROOT_USER", "sololakehouse"),
-        )
-        secret_key = os.environ.get(
-            "S3_SECRET_KEY",
-            os.environ.get("MINIO_ROOT_PASSWORD", "sololakehouse123"),
-        )
-        client = Minio(minio_endpoint, access_key=access_key, secret_key=secret_key, secure=False)
-        buckets = {bucket.name for bucket in client.list_buckets()}
-        storage_config = get_storage_config()
-        required = {
-            storage_config.data_bucket,
-            storage_config.audit_bucket,
-            storage_config.mlflow_artifact_bucket,
-        }
-        missing = sorted(required - buckets)
-        if missing:
-            return ("MinIO", "FAIL", f"Missing buckets: {', '.join(missing)}")
-
-        found = ", ".join(sorted(required))
-        return ("MinIO", "PASS", f"Buckets: {found}")
+        response = requests.get(f"{endpoint}/", timeout=5)
+        if response.status_code not in (200, 404):
+            return ("SeaweedFS", "FAIL", f"S3 endpoint returned HTTP {response.status_code}")
+        return ("SeaweedFS", "PASS", f"S3 API reachable ({endpoint})")
     except requests.Timeout:
-        return ("MinIO", "TIMEOUT", "Timed out after 5s")
+        return ("SeaweedFS", "TIMEOUT", "Timed out after 5s")
     except Exception as exc:
-        return ("MinIO", "FAIL", str(exc))
+        return ("SeaweedFS", "FAIL", str(exc))
 
 
 def check_postgres() -> StatusTuple:
@@ -133,7 +105,7 @@ def _check_postgres_via_docker(user: str) -> StatusTuple | None:
             [
                 "docker",
                 "exec",
-                "slh-postgres",
+                "sds-postgres",
                 "psql",
                 "-U",
                 user,
@@ -225,7 +197,7 @@ def check_dagster_credentials() -> StatusTuple:
     """
     try:
         result = subprocess.run(
-            ["docker", "exec", "slh-dagster-daemon", "env"],
+            ["docker", "exec", "sds-dagster-daemon", "env"],
             check=True,
             capture_output=True,
             text=True,
@@ -287,9 +259,7 @@ def check_dagster() -> StatusTuple:
 
 def validate_required_env_vars() -> list[str]:
     required = [
-        "MINIO_ROOT_USER",
-        "MINIO_ROOT_PASSWORD",
-        "MINIO_ENDPOINT",
+        "OBJECT_STORE_ENDPOINT",
         "POSTGRES_USER",
         "POSTGRES_PASSWORD",
         "POSTGRES_HOST",
@@ -332,7 +302,7 @@ def main() -> int:
         print(f"Missing required env vars: {', '.join(missing_env)}")
 
     checks: list = [
-        check_minio,
+        check_seaweedfs,
         check_postgres,
         check_hive_metastore,
         check_trino,

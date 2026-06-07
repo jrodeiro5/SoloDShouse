@@ -37,13 +37,13 @@ def test_empty_env_mapping_does_not_read_process_environment() -> None:
     ):
         identity = get_runtime_identity({})
 
-    assert identity.product_id == "sololakehouse"
-    assert identity.display_name == "SoloLakehouse"
-    assert identity.domain == "financial_markets"
+    assert identity.product_id == "solodshouse"
+    assert identity.display_name == "SoloDShouse"
+    assert identity.domain == "energy_ai_cost"
     assert identity.environment == "local"
-    assert identity.runtime_version == "slh-v2.5.1"
-    assert identity.compose_project_name == "sololakehouse"
-    assert identity.trino_user == "sololakehouse"
+    assert identity.runtime_version == "sds-v0.1.0"
+    assert identity.compose_project_name == "solodshouse"
+    assert identity.trino_user == "solodshouse"
 
 
 def test_provided_mapping_resolves_identity_from_that_mapping() -> None:
