@@ -159,6 +159,62 @@ Goal: all 15 UCM modules demonstrably covered, thesis-ready.
 
 ## Pi Agent Tasks
 
+### PI-002: Legacy SoloLakehouse Docs Digest
+
+**Owner:** pi-qa
+**Status:** unclaimed
+**Branch:** agent/pi-qa (worktree: `.superset/worktrees/.../pi-qa`)
+
+Read and digest all docs in `docs/sololakehouse_legacy_docs/` — the read-only original project docs. Goal: extract what was learned, what failed, what was decided and why. This becomes grounding context for Claude Code and OpenCode during SoloDShouse implementation.
+
+**Source:** `docs/sololakehouse_legacy_docs/` (40+ files — read-only, never modify)
+
+**Output:** `docs/solodshouse/legacy-digest/` — one file per topic:
+
+```
+docs/solodshouse/legacy-digest/
+  architecture-findings.md       ← what the original architecture was, what worked
+  decisions-findings.md          ← key ADR outcomes and the reasoning behind them
+  deployment-gotchas.md          ← VPS, Docker, Dagster, MinIO pain points found
+  data-pipeline-gotchas.md       ← Iceberg, Trino, DuckDB, Bronze/Silver/Gold edge cases
+  ml-findings.md                 ← ML layer decisions, what was tried
+  agent-findings.md              ← agent-prompts.md and related — what patterns emerged
+  domain-findings.md             ← ECB/DAX data quirks (maps to ENTSO-E gotchas to watch for)
+  README.md                      ← index + "what SoloDShouse should NOT repeat"
+```
+
+**Format per file:**
+```markdown
+## Conclusions
+- [what the original project concluded]
+
+## Findings
+- [what worked, what didn't]
+
+## Gotchas
+- [specific surprises, edge cases, undocumented behaviours]
+
+## SoloDShouse relevance
+- [what directly applies, what is superseded by our decisions]
+```
+
+**Priority docs to start with** (highest signal):
+1. `decisions/` folder — all ADRs
+2. `session-memory.md`
+3. `architecture.md`
+4. `ASSESSMENT_LAKEHOUSE_DAX_ECB.md`
+5. `agent-prompts.md`
+6. `vps-deployment-runbook.md` + `finlakehouse-deployment-guide.md`
+7. `medallion-model.md`
+
+**Rules:**
+- Extract substance, not summaries — specific error messages, specific config values, specific failures count
+- Flag anything that contradicts a current SoloDShouse ADR (SDS-XXX)
+- Do NOT modify any file in `docs/sololakehouse_legacy_docs/`
+- PR to main when digest is complete
+
+---
+
 ### PI-001: GitHub Stars Python Library Audit
 
 **Owner:** pi-qa
