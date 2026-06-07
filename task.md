@@ -157,6 +157,65 @@ Goal: all 15 UCM modules demonstrably covered, thesis-ready.
 
 ---
 
+## Phase 0.5: Dev Tooling Foundation — NEXT (assign to opencode-builder)
+
+### 0.5.1 Python Dependency Structure
+
+**Owner:** opencode-builder  
+**Status:** unclaimed
+
+Migrate from flat `requirements.txt` to `pyproject.toml` with `uv`-managed groups.
+
+- [ ] Create `pyproject.toml` with dep groups: `prod`, `dev`, `qa`
+- [ ] `prod` = runtime deps for Docker images (no pytest, no ruff, no mypy)
+- [ ] `dev` = prod + linting/typing tools (ruff, mypy, types-*)
+- [ ] `qa` = prod + test tools (pytest, pytest-cov) + browser automation (playwright)
+- [ ] Add `markitdown` to `dev` group (Moodle content extraction, dev-only)
+- [ ] Add `playwright` to `qa` group
+- [ ] Run `uv venv .venv` + `uv pip install -e ".[dev]"` — verify clean install
+- [ ] Update `Makefile` targets: `make install` uses `uv`, `make install-qa` adds qa group
+- [ ] Keep `requirements-dagster.txt` separate (Dagster has own constraints)
+- [ ] Delete `requirements.txt` after pyproject.toml verified
+
+### 0.5.2 Moodle Content Extraction (UCM Masters → Dev Context)
+
+**Owner:** opencode-builder  
+**Status:** unclaimed  
+**Purpose:** Extract UCM master's module content so Claude Code has domain grounding during implementation. This is dev tooling, NOT a product feature.
+
+**Approach:** Moodle REST API + markitdown conversion → markdown files indexed by qmd.
+
+Steps:
+- [ ] Investigate Moodle REST API at UCM (`/webservice/rest/server.php`) — requires user token
+- [ ] Create `scripts/extract_moodle.py`:
+  - Auth via Moodle token (env var `MOODLE_TOKEN`)
+  - List enrolled courses → filter TFM master modules
+  - For each module: fetch course contents (files, pages, resources)
+  - Download HTML/PDF resources
+  - Convert to markdown via `markitdown`
+  - Write to `docs/solodshouse/ucm-modules/module-{N:02d}-{slug}.md`
+- [ ] Fallback: if Moodle API blocked, use Playwright to scrape authenticated session
+  - `scripts/extract_moodle_browser.py` using playwright + Chrome DevTools
+  - Login flow → navigate course pages → extract text + download attachments
+- [ ] Run `qmd update` after extraction to index for Claude Code queries
+- [ ] Add `MOODLE_TOKEN` to `.env.example` (empty, with comment)
+- [ ] Script is one-shot, idempotent (skip already-extracted modules)
+
+**Output structure:**
+```
+docs/solodshouse/ucm-modules/
+  module-01-business-intelligence.md
+  module-02-sql.md
+  module-03-tableau.md
+  ...
+  module-15-applied-data-science.md
+  README.md   ← index of modules + coverage map vs SoloDShouse stack
+```
+
+**Blocked by:** MOODLE_TOKEN — user must provide. Leave placeholder, don't block on it.
+
+---
+
 ## Backlog / Pending Decisions
 
 | Item | Status | Notes |

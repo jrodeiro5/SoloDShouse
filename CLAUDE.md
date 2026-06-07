@@ -1,14 +1,14 @@
 # Agent Guide for SoloDShouse
 
-Read this before making any changes. SoloDShouse is a **fork** of SoloLakehouse v2.5 — not that project.
+Read before any changes. SoloDShouse = **fork** of SoloLakehouse v2.5 — not that project.
 
 ## What This Project Is
 
-**SoloDShouse (Solo Data Science House)** is a local-first data science + AI agent platform built as a TFM (Trabajo Fin de Máster) at Universidad Complutense de Madrid (Master in Big Data, Data Science & AI).
+**SoloDShouse (Solo Data Science House)** — local-first DS + AI agent platform, TFM at Universidad Complutense de Madrid (Master in Big Data, Data Science & AI).
 
-**Mission:** Full DS/ML/AI stack — data lakehouse, ML experiments, AI agents, neural networks — runnable on a single powerful local machine and a €5/month Hetzner VPS. Zero cloud surprise bills. Zero vendor lock-in.
+**Mission:** Full DS/ML/AI stack — data lakehouse, ML experiments, AI agents, neural networks — runs on single powerful local machine + €5/month Hetzner VPS. Zero cloud surprise bills. Zero vendor lock-in.
 
-**Domain:** European energy data (ENTSO-E grid + Open-Meteo weather) replacing the original SoloLakehouse financial domain (ECB/DAX).
+**Domain:** European energy data (ENTSO-E grid + Open-Meteo weather) replacing original SoloLakehouse financial domain (ECB/DAX).
 
 **Forked from:** SoloLakehouse v2.5 (github.com/Jiahong-Que-9527/SoloLakehouse). Original ADRs 001-020 in `docs/sololakehouse_legacy_docs/decisions/` — read-only, never modify.
 
@@ -18,40 +18,40 @@ Read this before making any changes. SoloDShouse is a **fork** of SoloLakehouse 
 
 ### 1. Think Before Coding
 
-Don't assume. Don't hide confusion. Surface tradeoffs.
+No assumptions. No hidden confusion. Surface tradeoffs.
 
 Before implementing:
-- State assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them — don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+- State assumptions explicitly. Uncertain → ask.
+- Multiple interpretations → present them, don't pick silently.
+- Simpler approach exists → say so. Push back when warranted.
+- Unclear → stop. Name what's confusing. Ask.
 
 ### 2. Simplicity First
 
-Minimum code that solves the problem. Nothing speculative.
+Minimum code. Nothing speculative.
 - No features beyond what was asked.
 - No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
+- No unrequested "flexibility" or "configurability".
 - No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
+- 200 lines could be 50 → rewrite it.
 
-Ask: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+Ask: "Would senior engineer call this overcomplicated?" Yes → simplify.
 
 ### 3. Surgical Changes
 
-Touch only what you must. Clean up only your own mess.
+Touch only what you must. Clean only your own mess.
 
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it — don't delete it.
+Editing existing code:
+- Don't "improve" adjacent code, comments, formatting.
+- Don't refactor things not broken.
+- Match existing style even if you'd differ.
+- Unrelated dead code → mention it, don't delete.
 
-When your changes create orphans:
-- Remove imports/variables/functions that **your** changes made unused.
+Your changes create orphans:
+- Remove imports/variables/functions **your** changes made unused.
 - Don't remove pre-existing dead code unless asked.
 
-Test: every changed line should trace directly to the user's request.
+Test: every changed line traces directly to user's request.
 
 ### 4. Goal-Driven Execution
 
@@ -59,24 +59,24 @@ Define success criteria. Loop until verified.
 
 Transform tasks into verifiable goals:
 - "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Fix the bug" → "Write test reproducing it, then make it pass"
 - "Refactor X" → "Ensure tests pass before and after"
 
-For multi-step tasks, state a brief plan:
+Multi-step tasks, state brief plan:
 ```
 1. [Step] → verify: [check]
 2. [Step] → verify: [check]
 3. [Step] → verify: [check]
 ```
 
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+Strong success criteria → loop independently. Weak ("make it work") → constant clarification.
 
 ## Hardware Targets
 
 | Environment | Machine | RAM | Cost |
 |-------------|---------|:---:|:----:|
 | DEV | Mac Studio M4 Max | 64 GB | owned |
-| STAGING | Hetzner CPX21 (3 vCPU / 4 GB / 80 GB) | 4 GB | ~€5/mo |
+| STAGING | Hetzner CX23 (2 vCPU / 4 GB / 40 GB) | 4 GB | ~€4.83/mo |
 
 **Docker runtime (macOS):** OrbStack — replaces Docker Desktop. Faster on Apple Silicon, lower RAM overhead, native `docker` and `docker compose` CLI. Install: `brew install orbstack`.
 
@@ -354,10 +354,10 @@ See `docs/solodshouse/decisions/` for full SDS ADR list. Summary:
 ## Things to Watch Out For
 
 - SeaweedFS replaces MinIO — use `OBJECT_STORE_*` env vars in new code, not `MINIO_*`
-- Bronze data is immutable — never overwrite, always append
-- Trino stays for federated SQL; DuckDB is the local/agent query path
+- Bronze data immutable — never overwrite, always append
+- Trino stays for federated SQL; DuckDB is local/agent query path
 - Hive Metastore stays — required by Trino for Iceberg catalog
-- VPS (Hetzner CPX21) has only 4 GB RAM — never run LLM inference there
+- VPS (Hetzner CX23 `agent-hub-vps`) has 4 GB RAM + 40 GB disk only — never run LLM inference there
 - LLM on VPS: route via LiteLLM -> Groq API (free) or SSH tunnel to Mac
 - deepagents does NOT expose OpenAI-compatible API — FastAPI proxy required
 - All SoloDShouse decisions document as `SDS-XXX` in `docs/solodshouse/decisions/`
@@ -387,35 +387,44 @@ See `docs/solodshouse/decisions/` for full SDS ADR list. Summary:
 
 ## Worktrees (Agent Isolation)
 
-Branches `magnetic-mile` and `sphenoid-toothbrush` are worktrees for agent isolation.
-Each agent (Claude Code, OpenCode) works in its own worktree — never writes directly to `main`.
-Changes go back via PR.
+Three-agent setup. Each agent owns a zone — never crosses into another's zone.
+
+| Agent | Worktree | Branch | Role |
+|-------|----------|--------|------|
+| **Claude Code** | `SoloDShouse/` (main) | `main` | Orchestrator — ADRs, task dispatch, PR merges, memory, deployments |
+| **OpenCode** | `.superset/worktrees/.../opencode` | `agent/opencode-builder` | Primary builder — implements phases aggressively and autonomously |
+| **Pi agent** | `.superset/worktrees/.../pi-qa` | `agent/pi-qa` | Junior QA — tests, reviews, maintains `tests/` and `docs/solodshouse/gotchas/` |
+
+**Rules:**
+- OpenCode and Pi agent never push to `main` directly — always PR
+- Claude Code reviews and merges PRs, never writes implementation code
+- Pi agent scope: `tests/`, `docs/solodshouse/gotchas/` only — no implementation
+- Task dispatch: claim tasks in `task.md` before starting, mark `in_progress`
 
 ```bash
 git worktree list     # See active agent worktrees
-git worktree add -b agent-branch ../agent-worktree main
 ```
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **SoloDShouse** (2637 symbols, 3651 relationships, 70 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+Project indexed by GitNexus as **SoloDShouse** (2637 symbols, 3651 relationships, 70 execution flows). Use GitNexus MCP tools to understand code, assess impact, navigate safely.
 
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
+> If any GitNexus tool warns index is stale, run `npx gitnexus analyze` in terminal first.
 
 ## Always Do
 
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
+- **MUST run impact analysis before editing any symbol.** Before modifying function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report blast radius (direct callers, affected processes, risk level) to user.
+- **MUST run `gitnexus_detect_changes()` before committing** to verify changes only affect expected symbols and execution flows.
+- **MUST warn user** if impact analysis returns HIGH or CRITICAL risk before proceeding.
+- Exploring unfamiliar code → use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. Returns process-grouped results ranked by relevance.
+- Need full context on specific symbol (callers, callees, execution flows) → use `gitnexus_context({name: "symbolName"})`.
 
 ## Never Do
 
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
+- NEVER edit function, class, or method without first running `gitnexus_impact`.
 - NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
+- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands call graph.
 - NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
 
 ## Resources
