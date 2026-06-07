@@ -1,3 +1,6 @@
+# GitNexus index (local only — regenerate with: npx gitnexus analyze)
+.gitnexus/
+
 .venv/
 __pycache__/
 *.pyc
