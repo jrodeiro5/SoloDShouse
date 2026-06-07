@@ -41,6 +41,7 @@
 | [SDS-033](SDS-032-agt-agent-governance.md) | AGT (Microsoft) para gobernanza de agentes | 2026-06-07 |
 | [SDS-034](SDS-034-adala-data-labeling.md) | Adala para data labeling | 2026-06-07 |
 | [SDS-035](SDS-035-nginx-portal-hub.md) | Portal nginx como hub central | 2026-06-07 |
+| [SDS-036](SDS-036-orbstack-docker-runtime.md) | OrbStack como runtime Docker en macOS (DEV) | 2026-06-07 |
 
 ## ADRs heredados del upstream (solo lectura)
 
