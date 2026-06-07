@@ -20,12 +20,19 @@ dependencies = [
     "trino>=0.336",
     # ML
     "scikit-learn>=1.8",
+    "scikit-lego>=0.9",       # custom transformers + pipeline utilities for sklearn
+    "skforecast>=0.14",       # sklearn-compatible time series forecasting (energy forecast)
     "xgboost>=3.2",
     "lightgbm>=4.6",
     "mlflow>=3.10",
     # API / ingestion
     "requests>=2.33",
     "pydantic>=2.12",
+    "entsoe-py>=0.8.0",          # ENTSO-E Transparency Platform client
+    "fredapi>=0.5.2",            # FRED (St. Louis Fed) economic data client
+    "toolz>=1.0",                # functional utilities (pipe, curry, compose)
+    # Agent tooling
+    "fastapi-mcp>=0.3",          # auto-generate MCP server from FastAPI routes
     # Observability
     "structlog>=25.5",
 ]
@@ -37,14 +44,22 @@ prod-extra = [
     "bentoml>=1.3",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
+    "uvloop>=0.21",           # fast asyncio event loop (Linux/macOS only, used by uvicorn)
 ]
 
-# Local dev: linting, typing, content tools — never goes in Docker
+# Local dev: linting, typing, security, complexity, dead code — never goes in Docker
 dev = [
     "solodshouse[prod-extra]",
     "ruff>=0.15",
     "mypy>=1.19",
     "types-requests>=2.33",
+    "bandit[toml]>=1.8",      # security linter (PyCQA)
+    "hexora>=0.1",            # malicious pattern detector (supply-chain + dependency audit)
+    "complexipy>=0.5",        # cognitive complexity analyzer
+    "vulture>=2.14",          # dead code finder
+    "wat-inspector>=0.3",     # object inspector for debugging (wat(obj))
+    "dlt>=1.9",               # data load tool — evaluate vs hand-rolled collectors
+    "hcloud>=2.4",            # Hetzner Cloud Python SDK (VPS automation)
     "markitdown>=0.1",        # Moodle content extraction → markdown (dev tooling only)
     "ipykernel>=6.29",
 ]
