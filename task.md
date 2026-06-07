@@ -157,6 +157,48 @@ Goal: all 15 UCM modules demonstrably covered, thesis-ready.
 
 ---
 
+## Pi Agent Tasks
+
+### PI-001: GitHub Stars Python Library Audit
+
+**Owner:** pi-qa
+**Status:** unclaimed
+**Branch:** agent/pi-qa (worktree: `.superset/worktrees/.../pi-qa`)
+
+Scrape and audit jrodeiro5's GitHub starred repos for Python libraries relevant to SoloDShouse.
+
+**Source:** https://github.com/jrodeiro5?language=python&tab=stars
+
+**Goal:** Identify starred Python libraries worth adding to `pyproject.toml` groups (`prod`, `dev`, `qa`). Cross-reference against existing deps — no duplicates.
+
+**Output:** `docs/solodshouse/gotchas/pi-001-starred-python-libs.md` with this structure:
+
+```markdown
+# PI-001: Starred Python Library Audit
+
+## Prod candidates
+| Lib | Stars | Why useful | pyproject group |
+|-----|------:|-----------|----------------|
+
+## Dev candidates
+| Lib | Stars | Why useful | pyproject group |
+
+## QA candidates
+| Lib | Stars | Why useful | pyproject group |
+
+## Rejected / already covered
+| Lib | Reason skipped |
+```
+
+**Rules:**
+- Use Playwright or gh CLI to paginate all starred pages (language=python filter)
+- Score by: relevance to SoloDShouse stack (lakehouse, ML, agents, observability), star count, last commit recency
+- Skip anything already in `pyproject.toml` or `requirements-dagster.txt`
+- Do NOT add to pyproject.toml — audit + recommend only, human decides
+- PR to main when doc is written
+
+---
+
 ## Phase 0.5: Dev Tooling Foundation — NEXT (assign to opencode-builder)
 
 ### 0.5.1 Python Dependency Structure
