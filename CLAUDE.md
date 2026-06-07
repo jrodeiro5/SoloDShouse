@@ -1,304 +1,338 @@
-# Agent Guide for SoloLakehouse
+# Agent Guide for SoloDShouse
 
-This file helps AI coding agents (Cursor, Copilot, etc.)
-understand the project quickly. Read this before making any changes.
+Read this before making any changes. SoloDShouse is a **fork** of SoloLakehouse v2.5 — not that project.
 
 ## What This Project Is
 
-SoloLakehouse is a **reference implementation** of a Lakehouse architecture,
-not a framework or library. It demonstrates how platforms like Databricks and
-Snowflake work internally, using only open-source tools on a single Docker
-Compose node.
+**SoloDShouse (Solo Data Science House)** is a local-first data science + AI agent platform built as a TFM (Trabajo Fin de Máster) at Universidad Complutense de Madrid (Master in Big Data, Data Science & AI).
 
-**Current: v2.5 single-track baseline** — orchestrated platform with Dagster assets/schedules/UI, **full-stack Iceberg** (Bronze/Silver/Gold all written via pyiceberg), and mandatory OpenMetadata + Superset in the default stack (see `docs/roadmap.md`).  
-**Next target (v3.0):** production infrastructure and governance hardening (multi-environment deployment, secrets/access governance, SLO/alerting, release promotion controls).
+**Mission:** Full DS/ML/AI stack — data lakehouse, ML experiments, AI agents, neural networks — runnable on a single powerful local machine and a €5/month Hetzner VPS. Zero cloud surprise bills. Zero vendor lock-in.
 
-**Domain:** Financial data engineering + ML (ECB interest rates + DAX stock index).
+**Domain:** European energy data (ENTSO-E grid + Open-Meteo weather) replacing the original SoloLakehouse financial domain (ECB/DAX).
+
+**Forked from:** SoloLakehouse v2.5 (github.com/Jiahong-Que-9527/SoloLakehouse). Original ADRs 001-020 in `docs/sololakehouse_legacy_docs/decisions/` — read-only, never modify.
+
+**SoloDShouse ADRs:** `docs/solodshouse/decisions/` (SDS-XXX prefix).
+
+## Hardware Targets
+
+| Environment | Machine | RAM | Cost |
+|-------------|---------|:---:|:----:|
+| DEV | Mac Studio M4 Max | 64 GB | owned |
+| STAGING | Hetzner CPX21 (3 vCPU / 4 GB / 80 GB) | 4 GB | ~€5/mo |
 
 ## Tech Stack
 
-| Layer | Technology | Version |
-|-------|-----------|---------|
-| Object Storage | MinIO (S3-compatible) | RELEASE.2025-09-07T16-13-09Z |
-| Metadata DB | PostgreSQL | 17 |
-| Table Catalog | Apache Hive Metastore (standalone) | 4.0.0 |
-| Query Engine | Trino (Hive + Iceberg catalogs) | 480 |
-| Table format (all layers) | Apache Iceberg via pyiceberg (Bronze/Silver/Gold) | ≥0.8.0 |
-| Data catalog | OpenMetadata | 1.5.x |
-| BI / SQL UI | Apache Superset | 6.0.0 |
-| ML Tracking | MLflow | 3.10.1 |
-| Orchestration | Dagster | 1.7.x (Python < 3.13) / 1.12.x (Python ≥ 3.13) |
-| Language | Python | 3.13+ |
-| Validation | Pydantic v2 | 2.12.5 |
-| Data Format | Iceberg (Parquet data files, snappy) for all layers; PyArrow 23.0.1 internally | — |
-| Logging | structlog | 25.5.0 |
-| Testing | pytest | 9.0.2 |
+### Lakehouse Layer (Base)
+
+| Component | Role | RAM |
+|-----------|------|:---:|
+| PostgreSQL 17 + pgvector + PostGIS | DB + vectors + geo | ~300 MB |
+| SeaweedFS (S3-compatible) | Object storage (replaces MinIO — archived Apr 2026) | ~150 MB |
+| Apache Hive Metastore | Iceberg catalog for Trino | ~400 MB |
+| Trino | Federated SQL query engine | ~1.5 GB |
+| DuckDB | Local OLAP (in-process, zero-config) | ~100 MB |
+| Apache Iceberg via pyiceberg | Table format (Bronze/Silver/Gold) | library |
+| dbt-core + dbt-duckdb | SQL transformations + MetricFlow metrics | CLI |
+| Dagster | Asset orchestration + scheduling | ~400 MB |
+
+### ML Layer
+
+| Component | Role | RAM |
+|-----------|------|:---:|
+| MLflow 3.x | Experiment tracking + model registry | ~300 MB |
+| BentoML | Classical model serving | ~200 MB |
+| XGBoost + LightGBM + scikit-learn | ML models | library |
+
+### Agent + AI Layer
+
+| Component | Role | RAM |
+|-----------|------|:---:|
+| deepagents | Agent harness (LangGraph-based) | ~200 MB |
+| FastAPI proxy | OpenAI-compatible API → deepagents | ~50 MB |
+| Open WebUI | Chat UI (self-hosted) | ~300 MB |
+| LiteLLM | Unified LLM gateway (100+ providers) | ~150 MB |
+| kotaemon | RAG UI (multi-user, citations, PDF) | ~1-2 GB |
+| mem0 | Structured agent memory | ~100 MB |
+| ToolUniverse + FastMCP | 1000+ scientific MCP tools | ~50 MB |
+| AGT (Microsoft) | Agent governance / policy enforcement | library |
+| garak (NVIDIA) | LLM vulnerability scanner (audit-only) | CLI |
+| Adala | Data labeling agent | library |
+
+### LLM Layer
+
+| Component | Role | RAM |
+|-----------|------|:---:|
+| LiteLLM | Unified LLM gateway | ~150 MB |
+| llama.cpp / vLLM | Local LLM inference (on-demand, Mac only) | 5-55 GB |
+| Groq API | Remote LLM (free tier, VPS fallback) | 0 |
+
+### Observability Layer
+
+| Component | Role | RAM |
+|-----------|------|:---:|
+| Langfuse | LLM traces + eval + prompt management | ~300 MB |
+| Prometheus + node_exporter | System metrics | ~100 MB |
+| Alertmanager + Apprise | Alerting to Telegram/Slack/WA | ~50 MB |
+
+### BI / Docs Layer
+
+| Component | Role | RAM |
+|-----------|------|:---:|
+| Evidence.dev | Primary BI (markdown-first, git-deployable) | ~200 MB |
+| nginx portal | Central service hub | ~10 MB |
+| Astro Starlight | Docs site | ~200 MB (build) |
+| MongoDB 7 | NoSQL store (UCM module 5) | ~300 MB |
+
+## Docker Compose Profiles
+
+| Profile | Services | RAM |
+|---------|----------|:---:|
+| `core` | PG+pgvector+PostGIS, SeaweedFS, Dagster, Hive, Trino | ~2.8 GB |
+| `ml` | core + MLflow, BentoML | ~3.3 GB |
+| `agent` | ml + deepagents, Open WebUI, LiteLLM, FastAPI proxy, mem0, kotaemon, ToolUniverse, garak, AGT | ~5.4 GB |
+| `observability` | Langfuse, Prometheus, Alertmanager | ~0.45 GB |
+| `bi` | Evidence.dev, nginx portal, Astro Starlight | ~0.4 GB |
+| **`full`** | core+ml+agent+obs+bi+MongoDB+Adala | **~6.6 GB** |
+| `llm-7b` | full + llama.cpp 7B | **~12.6 GB** |
+| `llm-70b` | full + vLLM 70B | **~56.6 GB** |
+| `+spark` | Spark on-demand add-on | **+4 GB** |
 
 ## Commands
 
 ```bash
-make up          # Start all Docker services + init MinIO buckets + create Iceberg namespaces/tables
-make down        # Stop services (data preserved under docker/data/)
-make pipeline    # Run Dagster full_pipeline_job (v2.5 default path)
-make dagster-ui  # Open Dagster UI (http://localhost:3000)
-make verify      # Health-check all services
-make test        # Run unit tests (pytest, no Docker needed)
-make lint        # ruff (CI)
-make typecheck   # mypy on ingestion/, transformations/, ml/, scripts/, dagster/ (install requirements-dagster.txt so the local dagster/ folder does not shadow PyPI dagster)
-make clean       # Stop services + delete docker/data/ + purge legacy named Docker volumes
+make up              # Start core stack + init SeaweedFS buckets + Iceberg namespaces
+make down            # Stop (data preserved under docker/data/)
+make pipeline        # Run Dagster full_pipeline_job
+make dagster-ui      # Open Dagster UI (http://localhost:3000)
+make verify          # Health-check all services
+make test            # Unit tests (pytest, no Docker needed)
+make lint            # ruff
+make typecheck       # mypy on ingestion/, transformations/, ml/, scripts/, dagster/
+make clean           # Stop + delete docker/data/ + purge volumes
 ```
 
 ## Project Layout
 
 ```
 ingestion/
-  collectors/         # One class per data source (ECBCollector, DAXCollector)
-  schema/             # Pydantic v2 models for record validation
-  quality/            # Bronze-layer quality check functions
-  bronze_writer.py    # Writes validated data to Iceberg (pyiceberg append_table)
+  collectors/         # ENTSOECollector, OpenMeteoCollector (replaces ECB/DAX)
+  schema/             # Pydantic v2 models
+  quality/            # Bronze-layer quality checks
+  bronze_writer.py    # Iceberg append via pyiceberg
   iceberg_io.py       # Core I/O: append_table, overwrite_table, scan_table, get_catalog
-  iceberg_schemas.py  # Iceberg Schema + PartitionSpec for all six tables
-  trino_sql.py        # Trino REST utility (execute_trino_sql only; Hive staging removed)
+  iceberg_schemas.py  # Iceberg Schema + PartitionSpec
+  trino_sql.py        # Trino REST utility (ad-hoc queries)
 
 transformations/
-  ecb_bronze_to_silver.py   # ECB: type cleanup, forward-fill, rate_change_bps
-  dax_bronze_to_silver.py   # DAX: weekend filter, daily_return
-  silver_to_gold_features.py # Join ECB+DAX, build event-study features
+  entso_bronze_to_silver.py      # ENTSO-E type cleanup, forward-fill
+  weather_bronze_to_silver.py    # Open-Meteo cleanup
+  silver_to_gold_features.py     # Join ENTSO-E+weather, build forecast features
 
 ml/
-  train_ecb_dax_model.py    # XGBoost/LightGBM with TimeSeriesSplit CV
-  evaluate.py               # MLflow experiment runner (multiple hyperparams)
+  train_energy_forecast.py       # XGBoost/LightGBM + LSTM with TimeSeriesSplit CV
+  evaluate.py                    # MLflow experiment runner
 
-scripts/
-  verify-setup.py           # Service health checks
-  bootstrap-postgres.py     # Ensure DBs exist; TCP password check + align vs .env after docker-exec bootstrap
-  prepare-docker-data-dirs.sh   # mkdir + perms for docker/data bind mounts
-  purge-legacy-docker-volumes.sh # Remove pre-bind-mount Docker named volumes (after down)
-  init-minio.sh             # Legacy bucket init (now handled by minio-init container)
-  trino-entrypoint.sh       # Expands all Trino catalog *.properties templates
+agents/
+  deepagents_proxy.py            # FastAPI proxy: OpenAI API -> deepagents
+  tools/                         # Custom MCP tools (ENTSO-E queries, Iceberg reads)
 
-config/
-  trino/catalog/hive.properties   # Template — uses ${S3_ACCESS_KEY}/${S3_SECRET_KEY}
-  trino/catalog/iceberg.properties # Iceberg connector + Hive Metastore catalog
-  trino/config.properties        # Trino coordinator settings
-  postgres/init.sql              # Creates hive_metastore + mlflow databases
+docs/
+  solodshouse/                   # SoloDShouse docs (our space)
+    decisions/                   # SDS-XXX ADRs
+    session-memory.md            # Session decisions and context
+    tfm-architecture-guide.md    # Full TFM architecture reference
+  sololakehouse_legacy_docs/     # Original SoloLakehouse docs (read-only)
 
-docker/
-  docker-compose.yml        # Core platform services
-  docker-compose.openmetadata.yml # OpenMetadata stack (included by default in Makefile)
-  docker-compose.superset.yml # Superset stack (included by default in Makefile)
-  data/                     # Bind-mounted runtime state (MinIO, Postgres, Dagster, OM; contents gitignored)
-  dagster/                  # Dagster image build context
-  hive-metastore/           # Custom Dockerfile + entrypoint (envsubst)
-  mlflow/                   # Custom Dockerfile
-  superset/                 # Custom Superset image + bootstrap config
-
-dagster/
-  assets.py                 # Software-defined assets, sensor, asset checks
-  resources.py              # IcebergCatalogResource + config resources
-  definitions.py            # Jobs/schedule/definitions registry
-  workspace.yaml            # Dagster code location workspace
-  dagster.yaml              # Dagster instance config (PostgreSQL storage)
-
-tests/                      # Unit tests (mocked I/O, no Docker needed)
-docs/                       # See docs/README.md — architecture, ADRs, roadmap, deployment
-data/sample/                # Committed sample CSV for DAX
+tests/                           # Unit tests (mocked I/O)
 ```
 
-## Architecture Patterns — Follow These When Adding Code
+## Architecture Patterns — Follow When Adding Code
 
 ### Collector Pattern (ingestion/collectors/)
 
 ```python
-class NewCollector:
-    def __init__(self, catalog: Catalog, bucket: str | None = None):
+class ENTSOECollector:
+    def __init__(self, catalog: Catalog):
         self.catalog = catalog
         self.bronze_writer = BronzeWriter(catalog)
 
-    def _fetch_data(self, ...) -> list | pd.DataFrame:
-        """Pull from source. Use structlog for logging."""
+    def _fetch_data(self, start: date, end: date) -> pd.DataFrame:
+        """Pull from ENTSO-E API. Use structlog. Validate response."""
 
     def _validate_records(self, raw_data) -> tuple[list, list]:
-        """Validate each record against a Pydantic schema.
-        Returns (valid_dicts, rejected_dicts)."""
+        """Pydantic v2 validation. Returns (valid_dicts, rejected_dicts)."""
 
-    def _already_ingested_today(self) -> bool:
-        """Check iceberg_io.scan_table for today's _ingestion_timestamp."""
+    def _already_ingested(self, date: date) -> bool:
+        """Check iceberg_io.scan_table for _ingestion_timestamp."""
 
     def collect(self, ...) -> dict:
-        """Orchestrate: fetch → validate → write Bronze (Iceberg append).
-        Returns summary dict with counts and iceberg: path."""
+        """fetch -> validate -> Bronze append. Returns summary dict."""
 ```
 
 ### Schema Pattern (ingestion/schema/)
 
 ```python
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, field_validator
 
-class NewRecord(BaseModel):
-    field: type
+class ENTSOERecord(BaseModel):
+    timestamp: datetime
+    country: str
+    generation_mw: float
 
-    @field_validator("field")
+    @field_validator("generation_mw")
     @classmethod
-    def validate_field(cls, v):
-        if bad: raise ValueError("reason")
+    def non_negative(cls, v):
+        if v < 0: raise ValueError("generation cannot be negative")
         return v
-
-    @model_validator(mode="after")    # for cross-field checks
-    def check_consistency(self):
-        if self.high < self.low: raise ValueError("...")
-        return self
 ```
 
-- Use `.model_dump()` (NOT `.dict()`) — this is Pydantic v2.
+Use `.model_dump()` not `.dict()` — Pydantic v2.
 
 ### Transformation Pattern (transformations/)
 
-Every transformation file has two functions:
+```python
+# Pure function (testable, no I/O)
+def transform_entso_bronze_to_silver(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    # type conversions -> filter -> sort -> derive fields -> dedup
+    return df[["col1", "col2", ...]]
 
-1. **Pure transform function** (testable, no I/O):
-   ```python
-   def transform_X_bronze_to_silver(df: pd.DataFrame) -> pd.DataFrame:
-       df = df.copy()  # never mutate input
-       # type conversions → filter → sort → derive fields → dedup → quality check
-       return df[["col1", "col2", ...]]  # explicit column subset
-   ```
+# Orchestration (reads Iceberg, calls transform, writes Iceberg)
+def run(catalog: Catalog) -> dict[str, object]:
+    df = scan_table(catalog, "bronze", "entso_generation")
+    silver_df = transform_entso_bronze_to_silver(df)
+    overwrite_table(catalog, "silver", "entso_generation_cleaned", silver_df, SILVER_SCHEMA)
+    return {"table": "iceberg:silver.entso_generation_cleaned", "row_count": len(silver_df)}
+```
 
-2. **Orchestration function** (reads Iceberg, calls transform, writes Iceberg):
-   ```python
-   def run(catalog: Catalog) -> dict[str, object]:
-       df = scan_table(catalog, "bronze", "source_name")
-       silver_df = transform_X_bronze_to_silver(df)
-       overwrite_table(catalog, "silver", "source_name_cleaned", silver_df, SILVER_SCHEMA)
-       return {"table": "iceberg:silver.source_name_cleaned", "row_count": len(silver_df)}
-   ```
-
-### Iceberg I/O Pattern (ingestion/iceberg_io.py)
+### Iceberg I/O Pattern
 
 ```python
 from ingestion.iceberg_io import append_table, overwrite_table, scan_table, get_catalog
 
-catalog = get_catalog()  # reads HIVE_METASTORE_URI, MINIO_ENDPOINT, S3_ACCESS_KEY from env
+catalog = get_catalog()  # reads HIVE_METASTORE_URI, OBJECT_STORE_ENDPOINT, S3_ACCESS_KEY from env
 
 # Bronze (immutable append)
-append_table(catalog, "bronze", "ecb_rates", df, BRONZE_ECB_RATES_SCHEMA, BRONZE_ECB_RATES_PARTITION)
+append_table(catalog, "bronze", "entso_generation", df, BRONZE_SCHEMA, BRONZE_PARTITION)
 
-# Silver / Gold (full overwrite on each run)
-overwrite_table(catalog, "silver", "ecb_rates_cleaned", df, SILVER_ECB_RATES_SCHEMA)
+# Silver / Gold (full overwrite each run)
+overwrite_table(catalog, "silver", "entso_generation_cleaned", df, SILVER_SCHEMA)
 
 # Read
-df = scan_table(catalog, "gold", "ecb_dax_features")
+df = scan_table(catalog, "gold", "energy_forecast_features")
 ```
-
-### Testing Pattern (tests/)
-
-- `class TestXxx` grouping, plain pytest (no unittest.TestCase)
-- Mock `pyiceberg.Catalog` with `unittest.mock.MagicMock`; monkeypatch `iceberg_io.scan_table` / `iceberg_io.overwrite_table` to capture writes
-- Test pure transform functions with small synthetic DataFrames
-- Test schemas for both valid and invalid inputs
-- Helper functions like `make_gold_training_frame()` for test data
 
 ### Logging Pattern
 
 ```python
 import structlog
 logger = structlog.get_logger()
-
-logger.info("event_name_snake_case", rows=100, table="iceberg:bronze.ecb_rates")
+logger.info("entso_data_ingested", rows=1440, country="ES", table="iceberg:bronze.entso_generation")
 ```
 
-- Event names: `snake_case`
-- Context: key-value pairs, not formatted strings
-- Log at step boundaries with counts
+Event names: `snake_case`. Context: key-value pairs. Log at step boundaries.
 
-### MinIO / Parquet direct I/O
-
-**No longer used in the pipeline** — all writes go through `iceberg_io`.
-If you need a raw MinIO client for tooling only:
+### Agent Tool Pattern (agents/tools/)
 
 ```python
-# Read
-response = minio.get_object(bucket, path)
-df = pd.read_parquet(BytesIO(response.read()))
-response.close()
-response.release_conn()
+from fastmcp import FastMCP
+
+mcp = FastMCP("solodshouse-tools")
+
+@mcp.tool()
+def query_gold_features(country: str, start: str, end: str) -> str:
+    """Query energy forecast features from Gold layer via DuckDB."""
+    ...
 ```
 
-### Environment Variables
-
-All credentials and endpoints come from env vars with local-dev defaults:
+## Environment Variables
 
 ```python
-endpoint = os.environ.get("MINIO_ENDPOINT", "localhost:9000")
-user = os.environ.get("MINIO_ROOT_USER", "sololakehouse")
+# Object store (SeaweedFS S3-compatible)
+endpoint = os.environ.get("OBJECT_STORE_ENDPOINT", "http://localhost:8333")
+access_key = os.environ.get("OBJECT_STORE_ACCESS_KEY", "solodshouse")
+
+# Buckets
+data_bucket = os.environ.get("DATA_BUCKET", "solodshouse-data")
+mlflow_bucket = os.environ.get("MLFLOW_ARTIFACT_BUCKET", "solodshouse-mlflow")
+warehouse_uri = os.environ.get("WAREHOUSE_URI", "s3a://solodshouse-data/warehouse/")
 ```
 
-Never hardcode credentials. Config files that need credentials use `envsubst`
-templates (see `config/trino/catalog/hive.properties`).
+Never hardcode credentials. Prefer `OBJECT_STORE_*` over `MINIO_*` for new code.
 
 ## Data Flow (Medallion — all Iceberg)
 
 ```
-ECB API / DAX CSV
-    → Bronze Iceberg (iceberg.bronze.{ecb_rates,dax_daily})
+ENTSO-E API / Open-Meteo API / Kaggle CSV
+    -> Bronze Iceberg (iceberg.bronze.{entso_generation,weather_hourly,...})
         append-only, day-partitioned on _ingestion_timestamp
-    → Silver Iceberg (iceberg.silver.{ecb_rates_cleaned,dax_daily_cleaned})
-        full overwrite each run; cleaned, typed, deduped, derived fields
-    → Gold Iceberg (iceberg.gold.ecb_dax_features)
-        full overwrite each run; one row per ECB rate-change event
-        — readable via Trino: SELECT * FROM iceberg.gold.ecb_dax_features
-    → MLflow (XGBoost/LightGBM experiments with TimeSeriesSplit CV)
-        reads Gold from Trino (preferred) or pyiceberg scan_table
+    -> Silver Iceberg (iceberg.silver.{entso_cleaned,weather_cleaned,...})
+        full overwrite; cleaned, typed, deduped, derived fields
+    -> Gold Iceberg (iceberg.gold.energy_forecast_features)
+        full overwrite; ML-ready feature matrix
+        -- queryable via DuckDB (local) or Trino (federated)
+    -> MLflow (XGBoost/LightGBM/LSTM with TimeSeriesSplit CV)
+    -> deepagents (natural-language queries over Gold via MCP tools)
 ```
-
-All writes go through `ingestion/iceberg_io.py` (pyiceberg HiveCatalog).
-`ingestion/trino_sql.py` is now a thin utility for ad-hoc Trino SQL only
-(Hive staging / CTAS removed — superseded by pyiceberg direct writes, ADR-020).
-
-MinIO bucket: `sololakehouse` (Iceberg warehouse: `s3://sololakehouse/warehouse/`)
-MLflow bucket: `mlflow-artifacts`
 
 ## Key Design Decisions
 
-- **Docker Compose, not K8s** — single-node reference; K8s is v3 (ADR-001)
-- **Trino, not DuckDB** — federation + Hive metadata (ADR-002)
-- **Iceberg for all layers via pyiceberg** — replaces Parquet+Hive staging; eliminates write-path duplication (ADR-020 supersedes ADR-003 and ADR-013)
-- **ECB/DAX data** — public APIs, temporal structure, no API keys (ADR-004)
-- **No Prometheus/Grafana until post-core** — meaningful metrics require custom instrumentation (ADR-005)
-- **TimeSeriesSplit** — no random CV on time-series data (look-ahead bias)
-- **Quality checks raise exceptions** — fail-fast, not silent degradation
-- **v3 governance-first productionization** — environment promotion, secrets/access governance, SLO-driven operations, and auditability are mandatory before claiming production readiness
+See `docs/solodshouse/decisions/` for full SDS ADR list. Summary:
+
+| Decision | SoloDShouse stance | Supersedes |
+|----------|-------------------|------------|
+| DuckDB | Complements Trino for local queries | ADR-002 |
+| K8s | Rejected — Docker Compose profiles, local-first | ADR-007 |
+| OpenMetadata | Eliminated — dbt docs + MetricFlow + Adala | ADR-014 |
+| Spark | On-demand compose profile only | ADR-016 |
+| MinIO | Replaced by SeaweedFS (MinIO archived Apr 2026) | ADR-019 |
+| Superset | Eliminated — Evidence.dev covers BI | SDS-022 |
+| Ollama | Eliminated — llama.cpp/vLLM + LiteLLM | SDS-023 |
+| Agent harness | deepagents (LangGraph) | SDS-024 |
+| Domain | ENTSO-E energy (not ECB/DAX finance) | SDS-030 |
 
 ## Things to Watch Out For
 
-- `config/trino/catalog/*.properties` are **templates** with `${VAR}` placeholders — bash `eval` expansion runs at container startup via `scripts/trino-entrypoint.sh` (includes `hive` + `iceberg`)
-- PostgreSQL is shared by Hive Metastore AND MLflow (two databases: `hive_metastore`, `mlflow`)
-- Bronze data is immutable — `BronzeWriter` calls `iceberg_io.append_table`; never overwrite
-- Iceberg namespaces/tables are bootstrapped by `scripts/init-iceberg-namespaces.py` (called by `make up`); if you reset the Hive Metastore run `make init-iceberg` to recreate them
-- `HIVE_METASTORE_URI=thrift://localhost:9083` in `.env` is for host-side scripts; Docker services override to `thrift://hive-metastore:9083`
-- Tests run without Docker — they mock `iceberg_io.scan_table` / `iceberg_io.overwrite_table`
-- The `version: "3.8"` field was intentionally removed from docker-compose.yml (deprecated in Compose V2)
+- SeaweedFS replaces MinIO — use `OBJECT_STORE_*` env vars in new code, not `MINIO_*`
+- Bronze data is immutable — never overwrite, always append
+- Trino stays for federated SQL; DuckDB is the local/agent query path
+- Hive Metastore stays — required by Trino for Iceberg catalog
+- VPS (Hetzner CPX21) has only 4 GB RAM — never run LLM inference there
+- LLM on VPS: route via LiteLLM -> Groq API (free) or SSH tunnel to Mac
+- deepagents does NOT expose OpenAI-compatible API — FastAPI proxy required
+- All SoloDShouse decisions document as `SDS-XXX` in `docs/solodshouse/decisions/`
+- Original SoloLakehouse ADRs in `docs/sololakehouse_legacy_docs/decisions/` — read-only
+- Tests run without Docker — mock `iceberg_io.scan_table` / `iceberg_io.overwrite_table`
+- Python: always `uv` + `.venv`, never global pip
 
-## Roadmap context
+## UCM Module Coverage
 
-Canonical tables and v1+ milestones: **`docs/roadmap.md`**. Active backlog: **`TASKS.md`**. Historical planning: **`docs/history/`**.
+| # | Module | How |
+|:-:|--------|-----|
+| 1 | Business Intelligence | Evidence.dev + Open WebUI |
+| 2 | SQL | DuckDB + dbt + Trino |
+| 3 | Tableau | Tableau Desktop -> DuckDB/PG |
+| 4 | Python Programming | Full Python stack |
+| 5 | NoSQL | MongoDB + pgvector |
+| 6 | Statistics | Time-series stats, hypothesis tests |
+| 7 | Data Mining | Anomaly detection, clustering (grid events) |
+| 8 | Machine Learning | XGBoost/LightGBM forecasting |
+| 9 | Data Visualization | Evidence.dev + Open WebUI |
+| 10 | DL / CNN / RNN / LLMs | LSTM forecasting + llama.cpp/vLLM |
+| 11 | Spark | PySpark on-demand profile |
+| 12 | Big Data | Iceberg + Spark + SeaweedFS |
+| 13 | Model Productivization | MLflow -> BentoML -> Langfuse |
+| 14 | TFM Context | Energy company use case (IberGrid framing) |
+| 15 | Applied Data Science | ENTSO-E -> lakehouse -> ML -> agent |
 
-| Version | Theme | Status |
-|---------|-------|--------|
-| **v1.0** | Full platform + Effortless Deployment (8-layer target, one-command setup, health checks, troubleshooting) | delivered |
-| **v2.5** | Orchestrated platform baseline (Dagster + Iceberg + OpenMetadata + Superset) | **current** |
-| **v3.0** | Production Infrastructure + Governance (Kubernetes/Helm, Terraform, environment promotion, secrets/access controls, SLO/alerting) | planned |
-| **v4.0** | Self-Serve Usability (docs-first onboarding, repeatable verification, clearer failure modes) | planned |
+## Worktrees (Agent Isolation)
 
-Ingestion-hardening and related tasks: see **`TASKS.md`** and **`docs/history/v2-planning.md`**.
+Branches `magnetic-mile` and `sphenoid-toothbrush` are worktrees for agent isolation.
+Each agent (Claude Code, OpenCode) works in its own worktree — never writes directly to `main`.
+Changes go back via PR.
 
-## History maintenance (required)
-
-To preserve long-term evolution context across v2/v3/v4, every major milestone update must also update `docs/history/`.
-
-Required actions per version:
-
-1. Update `docs/history/timeline.md` with milestone status, delivered scope, and next decision gate.
-2. Update `docs/history/architecture-evolution.md` with architecture choices made, alternatives rejected, and rationale.
-3. Create or update a version planning note using `docs/history/planning-template.md` (for example `docs/history/v2-planning.md`) before implementation starts.
-4. Cross-link version artifacts: release tag, release notes, checklist, and key ADRs.
+```bash
+git worktree list     # See active agent worktrees
+git worktree add -b agent-branch ../agent-worktree main
+```

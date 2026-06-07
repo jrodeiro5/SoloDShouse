@@ -1,232 +1,181 @@
-# SoloLakehouse
+# SoloDShouse
+
+<h3 align="center">Solo Data Science House</h3>
 
 <p align="center">
-  <img src="docs/img/slh-brand.png" width="300" alt="SoloLakehouse">
-</p>
-
-<h3 align="center">A local-first lakehouse reference architecture for production-minded data platform engineering.</h3>
-
-<p align="center">
-  MinIO · Trino · Iceberg · Dagster · MLflow · OpenMetadata · Superset
+  A local-first data science + AI agent platform for energy analytics.<br>
+  Built as a TFM at Universidad Complutense de Madrid.
 </p>
 
 <p align="center">
-  <a href="https://github.com/Jiahong-Que-9527/SoloLakehouse/actions/workflows/test.yml"><img src="https://github.com/Jiahong-Que-9527/SoloLakehouse/actions/workflows/test.yml/badge.svg" alt="CI"></a>
+  DuckDB · Iceberg · Dagster · MLflow · deepagents · LiteLLM · Evidence.dev
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/python-3.13%2B-blue.svg" alt="Python 3.13+">
   <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License">
   <img src="https://img.shields.io/badge/runtime-Docker%20Compose-2496ED.svg" alt="Docker Compose">
   <img src="https://img.shields.io/badge/table%20format-Iceberg-5C7CFA.svg" alt="Apache Iceberg">
-</p>
-
-<p align="center">
-  <a href="#quick-start"><strong>Run locally</strong></a>
-  ·
-  <a href="docs/architecture.md"><strong>Architecture</strong></a>
-  ·
-  <a href="docs/decisions/README.md"><strong>ADRs</strong></a>
-  ·
-  <a href="docs/project-state-overview-2026-05-05.md"><strong>Self-assessment</strong></a>
+  <img src="https://img.shields.io/badge/TFM-UCM%20Madrid-red.svg" alt="TFM UCM">
 </p>
 
 ---
 
-SoloLakehouse is a self-hosted reference data platform for regulated industries.
+> **Fork of [SoloLakehouse v2.5](https://github.com/Jiahong-Que-9527/SoloLakehouse).**
+> Original docs preserved in [`docs/sololakehouse_legacy_docs/`](docs/sololakehouse_legacy_docs/).
+> SoloDShouse ADRs and docs live in [`docs/solodshouse/`](docs/solodshouse/).
 
-It demonstrates how ingestion, orchestration, Iceberg tables, Trino query, MLflow, BI, metadata governance, and audit-oriented documentation can work together in one reproducible Docker Compose runtime.
+---
 
-The goal is not to replace Databricks, but to show the architecture thinking behind owning an open, governed, production-minded lakehouse platform.
+## What Is This
+
+SoloDShouse is a **local-first data science and AI agent platform** for European energy data analytics.
+
+It extends the SoloLakehouse v2.5 lakehouse baseline with:
+- An **ML layer** for renewable forecasting, price prediction, and anomaly detection
+- An **AI agent layer** (deepagents + Open WebUI) for natural-language data queries
+- A **local LLM layer** (llama.cpp / vLLM / Groq) routed through LiteLLM
+
+Everything runs on a Mac Studio M4 Max (64 GB) for development and a EUR 5/month Hetzner VPS for staging. No cloud dependency, no surprise bills.
+
+**This is a TFM** — it must demonstrate all 15 modules of the UCM Master in Big Data, Data Science & AI. The platform covers all 15.
 
 ## Architecture
 
-<p align="center">
-  <img src="docs/img/SLHv2.5_architecutre.png" alt="SoloLakehouse v2.5 architecture">
-</p>
-
-<p align="center">
-  <em>v2.5 baseline: local-first lakehouse with orchestration, governance, BI, ML tracking, and Iceberg Gold tables.</em>
-</p>
-
-
-```text
-Data sources
-  -> Python ingestion + validation
-  -> MinIO Bronze/Silver Parquet
-  -> Trino + Hive Metastore
-  -> Iceberg Gold tables
-  -> Superset dashboards + MLflow experiments
-
-Platform services:
-  PostgreSQL, Dagster, OpenMetadata, Superset, MLflow
+```
++-------------------------------------------------------------------+
+|  Layer 3: AI Agent                                                |
+|  deepagents (LangGraph) + Open WebUI + ToolUniverse (MCP)        |
+|  "Ask the AI about the energy data"                               |
++-------------------------------------------------------------------+
+|  Layer 2: ML & Analytics                                          |
+|  MLflow + BentoML + Evidence.dev + LSTM/XGBoost forecasting       |
++-------------------------------------------------------------------+
+|  Layer 1: Lakehouse                                               |
+|  DuckDB + dbt + Iceberg + SeaweedFS + Dagster + Trino             |
+|  Medallion: Bronze -> Silver -> Gold (all Iceberg)                |
++-------------------------------------------------------------------+
 ```
 
-The detailed architecture is in [docs/architecture.md](docs/architecture.md), and the medallion conventions are in [docs/medallion-model.md](docs/medallion-model.md).
+## Domain: European Energy Data
 
-## What It Solves
+| Source | Data | Access |
+|--------|------|--------|
+| ENTSO-E Transparency Platform | Generation, consumption, cross-border flows, day-ahead prices | Free API (entsoe-py), registration required |
+| Open-Meteo | Historical + forecast weather (temperature, wind, solar) | Free, no key needed |
+| Kaggle: Hourly Energy Spain | Demand/generation/prices 2015-2018 | CC0, CSV |
 
-Most lakehouse tutorials show **how to plug components together**. SoloLakehouse is built to answer the harder questions a regulated European platform team actually faces:
+**Why energy?** UCM Madrid is the natural context for ENTSO-E (European grid). Real-world complexity: time-series + spatial (grid nodes) + weather joins + regulatory relevance. Public API, no keys needed for demo.
 
-| Problem the platform answers | How SoloLakehouse addresses it |
-|---|---|
-| **"If BaFin asks for end-to-end lineage of this Gold table tomorrow, can we deliver it in 24h?"** | Three-source lineage join (OpenMetadata + Iceberg snapshots + Dagster runs) producing signable evidence packs to a WORM bucket. *([v2.6 — planned](docs/history/v2.6-planning.md))* |
-| **"Are we locked into our vendor's table format?"** | Iceberg Gold tables readable by Trino today, with documented multi-engine paths (Spark / DuckDB / Flink) and Hive-Metastore ↔ REST-Catalog switch. *([v2.7 — planned](docs/history/v2.7-planning.md))* |
-| **"Can we trace any model artifact back to the exact training data, code commit, and orchestration run?"** | MLflow runs bound to Iceberg snapshot id + Dagster run id + code commit + data-contract hash, with auto-generated EU AI Act Art.13 model cards. *([v2.8 — planned](docs/history/v2.8-planning.md))* |
-| **"Can the same stack run on a laptop and on Kubernetes without rewriting?"** | All services are containerized, configuration-externalized, state-externalized; v3.0 promotes the same images to K8s + Helm + Terraform. *([v2.9](docs/history/v2.9-planning.md) → [v3.0](docs/history/v3-planning.md))* |
+## Tech Stack
 
+| Layer | Component | Note |
+|-------|-----------|------|
+| Object Storage | SeaweedFS | Replaces MinIO (archived Apr 2026) |
+| Metadata DB | PostgreSQL 17 + pgvector + PostGIS | Vectors + geo |
+| Table Format | Apache Iceberg | All layers via pyiceberg |
+| Query Engine | Trino + DuckDB | Trino: federated; DuckDB: local/agent |
+| Transformations | dbt-core + dbt-duckdb | MetricFlow for metrics |
+| Orchestration | Dagster | Assets, schedules, sensors |
+| ML Tracking | MLflow 3.x | Experiment registry |
+| ML Serving | BentoML | Classical models |
+| Agent Harness | deepagents (LangGraph) | + FastAPI proxy |
+| Chat UI | Open WebUI | Self-hosted |
+| LLM Gateway | LiteLLM | Routes to llama.cpp / vLLM / Groq |
+| RAG | kotaemon + LlamaIndex | Multi-user, PDF, citations |
+| Agent Memory | mem0 | Structured memory |
+| MCP Tools | ToolUniverse + FastMCP | 1000+ scientific tools |
+| LLM Audit | garak (NVIDIA) | Vulnerability scanner |
+| Agent Governance | AGT (Microsoft) | Policy enforcement |
+| Data Labeling | Adala | Quality assurance |
+| Observability | Langfuse + Prometheus + Alertmanager | LLM traces + metrics + alerts |
+| BI | Evidence.dev | Markdown-first, git-deployable |
+| NoSQL | MongoDB 7 | UCM module 5 |
+| Docs | Astro Starlight | Static docs site |
+
+## Deployment
+
+```
+DEV (Mac Studio M4 Max, 64 GB, local)
+  docker compose --profile full up
+  LLM: llama.cpp / vLLM local
+
+CI (GitHub Actions)
+  build -> ghcr.io/jrodeiro5/solodshouse-*
+  test -> pytest + ruff + mypy
+
+STAGING (Hetzner CPX21, 4 GB, ~EUR 5/mo)
+  docker compose --profile core --profile agent up -d
+  LLM: Groq API (free) or SSH tunnel to Mac
+```
 
 ## Quick Start
 
-From a cold clone, the full stack starts through one command:
-
 ```bash
-git clone https://github.com/Jiahong-Que-9527/SoloLakehouse.git
-cd SoloLakehouse
+git clone https://github.com/jrodeiro5/SoloDShouse.git
+cd SoloDShouse
 make setup
-```
-
-`make setup` creates `.env` from `.env.example`, prepares `.venv`, installs Python dependencies, pulls images, starts the Compose stack, bootstraps databases, and waits for service health checks.
-
-Validate the stack, open the local operator portal, and run the end-to-end demo:
-
-```bash
 make verify
-make health
 make demo
 ```
 
-Operator portal: `http://127.0.0.1:8090/health`
+Key UIs after `make up`:
 
-The portal shows entity identity, service health, demo readiness, links to the
-core UIs, and the `make verify` -> Dagster -> Bronze/Silver/Gold -> Trino
-demo path.
+| UI | URL |
+|----|-----|
+| Dagster | http://localhost:3000 |
+| Open WebUI | http://localhost:3001 |
+| Evidence.dev | http://localhost:3002 |
+| MLflow | http://localhost:5000 |
+| Trino | http://localhost:8080 |
+| SeaweedFS | http://localhost:9333 |
+| Portal | http://localhost:8090 |
 
-Key UIs:
+## Monthly Cost
 
-- Dagster: `http://localhost:3000`
-- Superset: `http://localhost:8088`
-- OpenMetadata: `http://localhost:8585`
-- MLflow: `http://localhost:5000`
-- Trino: `http://localhost:8080`
-- MinIO Console: `http://localhost:9001`
+| Item | Cost |
+|------|:----:|
+| Mac Studio M4 Max | owned |
+| Hetzner CPX21 VPS | EUR 5.01 |
+| Groq API (LLM on VPS) | EUR 0 (free tier) |
+| ENTSO-E API | EUR 0 |
+| Open-Meteo API | EUR 0 |
+| **Total** | **~EUR 5-25/mo** |
 
-See [docs/quickstart.md](docs/quickstart.md), [docs/deployment.md](docs/deployment.md), [DEMO.md](DEMO.md), and [RUNBOOK.md](RUNBOOK.md) for details, sizing, credentials, and troubleshooting.
+## UCM Module Coverage
 
-## Demo
-
-- SLH setup demo (YouTube): [https://www.youtube.com/watch?v=dH0Nwteas7E](https://www.youtube.com/watch?v=dH0Nwteas7E)
-
-## Capabilities Demonstrated (v2.5)
-
-- **Medallion architecture** with strict Bronze immutability, Pydantic-v2 schema validation at ingestion, and Iceberg-backed Gold
-- **Asset-aware orchestration** in Dagster — jobs, schedules, sensors, asset checks, and lineage in the UI (not task-based DAGs)
-- **Federated query** across Hive (Bronze/Silver) and Iceberg (Gold) catalogs via a single Trino endpoint
-- **Open table format discipline** — Iceberg Gold tables managed via Trino CTAS, no proprietary engine lock-in
-- **ML governance baseline** — MLflow experiments with object-storage artifacts; `TimeSeriesSplit` CV as a discipline (look-ahead bias is treated as a defect, not a default)
-- **Catalog & BI integration** — OpenMetadata for lineage and ownership, Superset for SQL-first BI on Trino
-- **Production-minded engineering** — CI gates, type checking, ADRs per non-trivial decision, release notes and planning notes per minor version
-
-The reference data domain is European financial markets — ECB Statistical Data Warehouse interest rates and the DAX equity index — chosen deliberately because it surfaces real-world challenges in temporal joins, look-ahead bias, and regulatory data lineage. The active runtime is **v2.5**; historical v1/v2 material is preserved under [docs/history/](docs/history/).
-
-## Engineering Practices
-
-Beyond the platform features, this is built with explicit engineering discipline a hiring panel can audit:
-
-- **Test discipline** — pure-function transforms unit-tested without Docker; Pydantic v2 schema validation on every Bronze record; quality checks fail-fast rather than silent-degrade
-- **Type discipline** — `mypy` over `ingestion/`, `transformations/`, `ml/`, `scripts/`, `dagster/`
-- **Lint discipline** — `ruff` enforced in CI
-- **Architecture discipline** — every non-trivial decision recorded as an [ADR](docs/decisions/README.md)
-- **Release discipline** — version-tagged release notes, planning note per minor version, evolution timeline at [docs/history/timeline.md](docs/history/timeline.md)
-- **Observability discipline** — `structlog` JSON events at every step boundary; SLO emit pipeline planned for [v2.9](docs/history/v2.9-planning.md)
-- **CI** — GitHub Actions runs lint + typecheck + tests on every push
-
-## Evolution Roadmap
-
-The platform evolves along a single narrative: **first make it run, then make every claim provable on the same Compose stack, and only then migrate the runtime to Kubernetes.** v2.5 is the live runtime today (capabilities listed above). Each minor version after that adds **one category of evidence** the platform can produce — without changing the runtime.
-
-| Version | Theme | Problem | Focus |
-|---------|-------|---------|-------|
-| **v2.5** *(delivered)* | Platform can run | local-first lakehouse baseline | reproducible Docker Compose stack, Bronze/Silver/Gold flow, Trino, Dagster, MLflow, OpenMetadata, Superset |
-| **v2.6** *(planned)* | Platform can produce evidence | regulatory lineage & audit readiness | Dagster + OpenMetadata + Iceberg three-source lineage join, signable audit evidence pack on WORM storage, **DORA 24h / BaFin-style** traceability, data contracts as the gate |
-| **v2.7** *(planned)* | Platform can prove openness | data sovereignty & vendor lock-in | multi-engine Iceberg demo (Trino / Spark / DuckDB / Flink), Hive Metastore ↔ Iceberg REST Catalog switch, signable sovereignty report + exit playbook, Databricks-to-Iceberg migration PoC |
-| **v2.8** *(planned)* | Platform can govern AI | compliant AI / model traceability | MLflow ↔ Iceberg snapshot five-tuple binding (snapshot_id, dagster.run_id, feature_version, code_commit, data_contract_hash), auto **EU AI Act Art.13** model card, ML asset checks for performance regression *(model serving stays out — ADR-011)* |
-| **v2.9** *(planned)* | Platform has production shape | operational readiness | SLO emit + Superset "Platform Health" dashboard, `.env.shared` vs `.env.secrets` discipline, promotion/rollback drill with `make` entrypoints, Iceberg snapshot rollback drill, K8s readiness gate before v3.0 |
-| **v3.0** *(planned)* | Platform can run in production | scalable deployment & environment management | Kubernetes, Helm, Terraform, dev/stage/prod separation, managed secrets, GitOps-ready deployment model |
-| **v4.0** *(planned)* | Self-serve usability | docs-first onboarding | repeatable verification, clearer failure modes, operational polish |
-
-Per-version planning notes:
-
-- v2.5 — [docs/history/v2.5-planning.md](docs/history/v2.5-planning.md)
-- v2.6 — [docs/history/v2.6-planning.md](docs/history/v2.6-planning.md)
-- v2.7 — [docs/history/v2.7-planning.md](docs/history/v2.7-planning.md)
-- v2.8 — [docs/history/v2.8-planning.md](docs/history/v2.8-planning.md)
-- v2.9 — [docs/history/v2.9-planning.md](docs/history/v2.9-planning.md)
-- v3.0 — [docs/history/v3-planning.md](docs/history/v3-planning.md)
-
-See [docs/roadmap.md](docs/roadmap.md) for the canonical version status table, and [docs/history/timeline.md](docs/history/timeline.md) for the full evolution timeline.
-
-## Portability & Migration Paths
-
-The platform is built around **replaceable boundaries** — not because every component will be replaced, but because every component **could** be without rewriting the platform contract:
-
-| Boundary | Current (v2.5) | Migration target | Trigger criteria |
-|----------|----------------|------------------|------------------|
-| Object storage | MinIO | SeaweedFS / Ceph / S3 / GCS | scale beyond single-node throughput; multi-region requirement |
-| Runtime | Docker Compose | Kubernetes + Helm + Terraform | multi-environment promotion; HA / SLO requirement *(v3.0)* |
-| Metadata DB | Local PostgreSQL 17 | Managed / HA PostgreSQL | RPO < 24h or production SLO commitment |
-| Catalog | Hive Metastore | Iceberg REST Catalog | multi-engine demand or vendor-neutral catalog requirement *(v2.7)* |
-| Secrets | `.env` files | Vault / cloud KMS | multi-tenant or multi-environment deployment *(v3.0)* |
-| BI / Catalog | Superset / OpenMetadata | Enterprise tool (Looker, Atlan, etc.) | enterprise procurement constraints |
-
-Each boundary has a corresponding ADR explaining the current choice and the explicit conditions under which it should change. See the [ADR index](docs/decisions/README.md).
-
-## Can My Machine Run This?
-
-Minimum local profile for the full v2.5 stack:
-
-| Requirement | Minimum | Recommended |
-|---|---:|---:|
-| CPU | 4 cores | 6+ cores |
-| Free RAM | 8 GB | 12+ GB |
-| Free disk | 10 GB | 20+ GB |
-
-Required software:
-
-| Software | Version |
-|---|---|
-| Git | 2.40+ |
-| Docker Engine / Desktop | 24.0+ |
-| Docker Compose plugin | v2.20+ |
-| Python | 3.13+ |
-| make | any recent GNU/BSD make |
-
-OS compatibility:
-
-| OS | Status | Notes |
-|---|---|---|
-| Linux | Supported | Primary local path |
-| macOS | Supported | Docker Desktop required |
-| Windows WSL2 | Supported | Run commands inside the Linux distro |
-| Native Windows shell | Not supported | Use WSL2 |
-
-First run usually takes 10-15 minutes on a typical laptop because Docker pulls OpenMetadata, Superset, Trino, MLflow, and database images. If your network is slow, budget 20-30 minutes for image pulls.
-
+| # | Module | How |
+|:-:|--------|-----|
+| 1 | Business Intelligence | Evidence.dev + Open WebUI |
+| 2 | SQL | DuckDB + dbt + Trino |
+| 3 | Tableau | Tableau Desktop -> DuckDB/PG |
+| 4 | Python Programming | Full Python stack |
+| 5 | NoSQL Databases | MongoDB + pgvector |
+| 6 | Statistics | Time-series stats, hypothesis tests |
+| 7 | Data Mining | Anomaly detection, clustering (grid events) |
+| 8 | Machine Learning | XGBoost/LightGBM energy forecasting |
+| 9 | Data Visualization | Evidence.dev + Open WebUI charts |
+| 10 | Deep Learning / CNN / RNN / LLMs | LSTM forecasting + llama.cpp/vLLM agent |
+| 11 | Spark | PySpark on-demand profile |
+| 12 | Big Data Technologies | Iceberg + Spark + SeaweedFS |
+| 13 | Model Productivization | MLflow -> BentoML -> Langfuse monitoring |
+| 14 | TFM Context | Energy utility use case (IberGrid framing) |
+| 15 | Applied Data Science | ENTSO-E -> lakehouse -> ML -> agent |
 
 ## Documentation
 
-- [Architecture](docs/architecture.md)
-- [Quick start](docs/quickstart.md)
-- [Deployment](docs/deployment.md)
-- [Entity backup and restore runbook](docs/entity-backup-restore-runbook.md)
-- [Roadmap](docs/roadmap.md)
-- [ADR index](docs/decisions/README.md)
-- [Demo runbook](docs/DEMO_RUNBOOK_EN.md)
-- [User guide](docs/USER_GUIDE_EN.md)
-- [Self-assessment](docs/ASSESSMENT_LAKEHOUSE_DAX_ECB.md)
+- [TFM Architecture Guide](docs/solodshouse/tfm-architecture-guide.md)
+- [Session Memory & Decisions](docs/solodshouse/session-memory.md)
+- [SoloDShouse ADRs](docs/solodshouse/decisions/README.md) (SDS-XXX)
+- [SoloLakehouse Legacy Docs](docs/sololakehouse_legacy_docs/README.md) (read-only)
 
-## Feedback
+## Origin
 
-If this architecture is useful, star the repo so more platform engineers can find it.
+SoloDShouse is a fork of [SoloLakehouse](https://github.com/Jiahong-Que-9527/SoloLakehouse) v2.5.
 
-Architecture critiques are welcome, especially around governance hardening, migration paths, and v3 productionization priorities.
+Key divergences from upstream: domain pivot (ECB/DAX -> ENTSO-E), AI agent layer (deepagents), local LLM (llama.cpp/vLLM), SeaweedFS replaces MinIO, DuckDB added, OpenMetadata + Superset eliminated, Spark on-demand only, Evidence.dev as BI.
+
+See [SDS ADRs](docs/solodshouse/decisions/README.md) for all fork decisions.
 
 ## License
 

@@ -37,7 +37,26 @@ The active runtime baseline is **v2.5 single-track**; older ADRs remain valuable
 - [ADR-012-v3-data-governance-catalog-strategy.md](ADR-012-v3-data-governance-catalog-strategy.md): Hive-first governance baseline with upgrade-ready catalog strategy
 - [ADR-015-v3-observability-tooling.md](ADR-015-v3-observability-tooling.md): adopt Prometheus + Grafana + Alertmanager as the v3 observability stack (concrete tooling for ADR-010)
 
+## SoloDShouse Fork Decisions (SDS-XXX)
+
+SoloDShouse is a fork of SoloLakehouse v2.5 that diverges from the upstream project.
+New and superseding decisions are documented separately under the `SDS-` prefix.
+
+👉 **[SoloDShouse ADRs → solodshouse/](solodshouse/)**
+
+Five SDS decisions supersede upstream ADRs:
+
+| SoloDShouse | Supersedes | Divergence |
+|------------|------------|-------------|
+| SDS-002 | ADR-002 | DuckDB complements Trino (not replaced) |
+| SDS-007 | ADR-007 | Local-first Docker Compose profiles (no K8s) |
+| SDS-014 | ADR-014 | OpenMetadata eliminated |
+| SDS-016 | ADR-016 | dbt-duckdb + Spark on-demand (not dbt-spark) |
+| SDS-019 | ADR-019 | SeaweedFS/floci replaces MinIO (MinIO archived Apr 2026) |
+
 ## How to add new ADRs
+
+### Upstream ADRs (ADR-XXX)
 
 1. Create the next numbered `ADR-xxx-*.md` file.
 2. Include: context, decision, rationale, trade-offs, alternatives, upgrade/rollback notes.
@@ -45,3 +64,10 @@ The active runtime baseline is **v2.5 single-track**; older ADRs remain valuable
    - `docs/README.md`
    - `docs/history/architecture-evolution.md`
    - relevant version planning note in `docs/history/`
+
+### SoloDShouse ADRs (SDS-XXX)
+
+1. Create a new `SDS-xxx-*.md` file in `solodshouse/`.
+2. Include: context, decision, rationale, consequences, alternatives considered.
+3. If the decision supersedes an upstream ADR, add `Supersedes: ADR-XXX`.
+4. Update `solodshouse/README.md` index.

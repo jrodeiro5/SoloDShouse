@@ -4,6 +4,52 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+---
+
+> **SoloDShouse fork begins here.**
+> This repo is a fork of SoloLakehouse v2.5. Entries below the `[SoloDShouse Fork]` marker belong to the original project and are preserved for historical context. SoloDShouse changes appear above.
+>
+> Original docs: [`docs/sololakehouse_legacy_docs/`](docs/sololakehouse_legacy_docs/)
+> SoloDShouse ADRs: [`docs/solodshouse/decisions/`](docs/solodshouse/decisions/)
+
+---
+
+## [SoloDShouse Unreleased]
+
+### Added
+- `docs/solodshouse/` — SoloDShouse-specific docs space (ADRs, session memory, TFM guide)
+- `docs/solodshouse/decisions/` — SDS-XXX ADR series (SDS-002 through SDS-035)
+- `docs/solodshouse/session-memory.md` — full stack decisions and context log
+- `docs/solodshouse/tfm-architecture-guide.md` — TFM architecture reference
+
+### Changed
+- `CLAUDE.md` — rewritten for SoloDShouse identity (Solo Data Science House, TFM UCM Madrid)
+- `README.md` — rewritten: new mission, 3-layer architecture, ENTSO-E domain, cost table, UCM coverage
+- `CONTRIBUTING.md` — updated for SoloDShouse fork workflow
+- `task.md` — updated to SoloDShouse build phases
+
+### Structural
+- `docs/sololakehouse_legacy_docs/` — original SoloLakehouse docs preserved intact (read-only)
+- Worktrees `magnetic-mile` and `sphenoid-toothbrush` established for agent isolation
+
+### Key Fork Decisions (see SDS ADRs)
+- Domain: ECB/DAX (finance) -> ENTSO-E + Open-Meteo (energy) — SDS-030
+- SeaweedFS replaces MinIO (MinIO archived Apr 2026) — SDS-019
+- DuckDB added as local query engine alongside Trino — SDS-002
+- AI agent layer: deepagents + Open WebUI + LiteLLM — SDS-024
+- OpenMetadata eliminated; replaced by dbt docs + MetricFlow + Adala — SDS-014
+- Superset eliminated; replaced by Evidence.dev — SDS-022
+- Spark on-demand compose profile only — SDS-016
+- K8s deferred indefinitely; Docker Compose profiles are the deployment model — SDS-007
+- pgvector in PostgreSQL replaces standalone Qdrant — SDS-031
+- Langfuse for LLM observability; Prometheus + Alertmanager for system metrics — SDS-028/029
+
+---
+
+## [SoloDShouse Fork Point] — forked from SoloLakehouse v2.5 on 2026-06-07
+
+> Everything below this line is original SoloLakehouse history. Preserved unchanged.
+
 ## [Unreleased]
 
 ### Changed
