@@ -17,26 +17,26 @@ def _make_catalog_mock():
 
 
 class TestBronzeWriter:
-    def test_write_returns_iceberg_path_for_ecb(self) -> None:
-        catalog, table_mock = _make_catalog_mock()
-        writer = BronzeWriter(catalog, bucket="sololakehouse")
+    def test_write_returns_iceberg_path_for_carbon_intensity(self) -> None:
+        catalog, _table = _make_catalog_mock()
+        writer = BronzeWriter(catalog, bucket="solodshouse-data")
         df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
 
         with patch("ingestion.iceberg_io.append_table") as mock_append:
-            path = writer.write(df, source="ecb_rates")
+            path = writer.write(df, source="carbon_intensity")
 
-        assert path == "iceberg:bronze.ecb_rates"
+        assert path == "iceberg:bronze.carbon_intensity"
         mock_append.assert_called_once()
 
-    def test_write_returns_iceberg_path_for_dax(self) -> None:
+    def test_write_returns_iceberg_path_for_mlperf_benchmarks(self) -> None:
         catalog, _ = _make_catalog_mock()
         writer = BronzeWriter(catalog)
         df = pd.DataFrame({"a": [1]})
 
         with patch("ingestion.iceberg_io.append_table") as mock_append:
-            path = writer.write(df, source="dax_daily")
+            path = writer.write(df, source="mlperf_benchmarks")
 
-        assert path == "iceberg:bronze.dax_daily"
+        assert path == "iceberg:bronze.mlperf_benchmarks"
         mock_append.assert_called_once()
 
     def test_write_rejected_returns_iceberg_path(self) -> None:
