@@ -159,6 +159,68 @@ Goal: all 15 UCM modules demonstrably covered, thesis-ready.
 
 ## Pi Agent Tasks
 
+### Catch-up instructions (run before starting any task)
+
+Pi agent worktree: `~/.superset/worktrees/b655ad57-2231-4266-8595-f4dd7276acf5/pi-qa` on branch `agent/pi-qa`. Main has moved significantly (Phases A–F complete, ~13 new commits). Before starting any task:
+
+```bash
+git fetch origin
+git merge origin/main
+```
+
+---
+
+### PI-003: Tests for Phase F transforms
+
+**Owner:** pi-qa  
+**Status:** unclaimed  
+**Branch:** agent/pi-qa
+
+Write unit tests for the new Bronze→Silver transform functions (pure functions, no Iceberg I/O needed).
+
+**Files to test:**
+
+| Source | Test file to create |
+|--------|-------------------|
+| `transformations/mlperf_bronze_to_silver.py` | `tests/test_mlperf_transform.py` |
+| `transformations/pricing_bronze_to_silver.py` | `tests/test_pricing_transform.py` |
+
+**`test_mlperf_transform.py` cases:**
+- Empty input → empty DataFrame with correct columns
+- Valid rows grouped to best tokens_per_sec per (model_name, accelerator, scenario)
+- "NVIDIA H100 SXM5 80GB" → tdp_watts=700.0, wh_per_million_tokens computed
+- Unknown accelerator → tdp_watts NaN, wh_per_million_tokens NaN
+- Negative tokens_per_sec filtered out
+- `get_tdp("NVIDIA H100 SXM5 80GB")` == 700.0; `get_tdp("NVIDIA T4")` == 70.0; `get_tdp("TPU v4")` is NaN
+- `run()` with mocked scan/overwrite calls `overwrite_table` once
+
+**`test_pricing_transform.py` cases:**
+- Empty pricing_df → empty DataFrame
+- Multiple rows same (provider, instance_type, region) → keeps most recent captured_at
+- With FX rate → `price_eur_per_hour = price_usd / eur_usd`
+- Empty fx_df → 1:1 fallback rate used
+- "Standard_NC24ads_A100_v4" → accelerator="NVIDIA A100 PCIe 80GB"
+- Unknown SKU → accelerator is None
+- `run()` with mocked scan/overwrite calls `overwrite_table` once; handles missing fx_rates table
+
+**Mock pattern:**
+```python
+from unittest.mock import MagicMock, patch
+import pandas as pd
+
+@patch("ingestion.iceberg_io.overwrite_table")
+@patch("ingestion.iceberg_io.scan_table")
+def test_run_calls_overwrite(mock_scan, mock_overwrite):
+    mock_scan.return_value = pd.DataFrame([...])
+    from transformations.mlperf_bronze_to_silver import run
+    run(MagicMock())
+    mock_overwrite.assert_called_once()
+```
+
+**Rules:** No Docker. `make test` must pass. PR to main.
+
+---
+
 ### PI-002: Legacy SoloLakehouse Docs Digest
 
 **Owner:** pi-qa
