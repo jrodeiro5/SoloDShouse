@@ -1,5 +1,6 @@
 name: CI
-# Local runner: install act (https://github.com/nektos/act) then run:
+# Local runner (macOS uses OrbStack — https://orbstack.dev):
+# Install act (https://github.com/nektos/act) then run:
 #   act push                  # full CI
 #   act push -j lint          # single job
 #   act push -j test          # skip compose-demo (needs Docker-in-Docker)

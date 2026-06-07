@@ -78,6 +78,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 | DEV | Mac Studio M4 Max | 64 GB | owned |
 | STAGING | Hetzner CPX21 (3 vCPU / 4 GB / 80 GB) | 4 GB | ~€5/mo |
 
+**Docker runtime (macOS):** OrbStack — replaces Docker Desktop. Faster on Apple Silicon, lower RAM overhead, native `docker` and `docker compose` CLI. Install: `brew install orbstack`.
+
 ## Tech Stack
 
 ### Lakehouse Layer (Base)
