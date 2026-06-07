@@ -1,7 +1,7 @@
 .PHONY: up down clean bootstrap-db reset-mlflow-db wait-postgres-ready pipeline pipeline-dagster verify demo health health-json test test-cov test-cov-html test-integration release-check lint typecheck setup wait dagster-install dagster-ui prepare-data-dirs purge-legacy-docker-volumes init-iceberg
 
 COMPOSE_FILE := docker/docker-compose.yml
-COMPOSE_STACK := -f docker/docker-compose.yml -f docker/docker-compose.openmetadata.yml -f docker/docker-compose.superset.yml
+COMPOSE_STACK := -f docker/docker-compose.yml
 ENV_FILE ?= .env
 DOCKER_COMPOSE := docker compose --env-file $(ENV_FILE)
 PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
