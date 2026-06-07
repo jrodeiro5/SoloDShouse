@@ -1,4 +1,4 @@
-"""Bronze-layer Iceberg writer for SoloLakehouse."""
+"""Bronze-layer Iceberg writer for SoloDShouse."""
 
 from __future__ import annotations
 
@@ -11,10 +11,14 @@ import structlog
 
 from ingestion import iceberg_io
 from ingestion.iceberg_schemas import (
-    BRONZE_DAX_DAILY_PARTITION,
-    BRONZE_DAX_DAILY_SCHEMA,
-    BRONZE_ECB_RATES_PARTITION,
-    BRONZE_ECB_RATES_SCHEMA,
+    BRONZE_CARBON_INTENSITY_PARTITION,
+    BRONZE_CARBON_INTENSITY_SCHEMA,
+    BRONZE_CLOUD_GPU_PRICING_PARTITION,
+    BRONZE_CLOUD_GPU_PRICING_SCHEMA,
+    BRONZE_FX_RATES_PARTITION,
+    BRONZE_FX_RATES_SCHEMA,
+    BRONZE_MLPERF_BENCHMARKS_PARTITION,
+    BRONZE_MLPERF_BENCHMARKS_SCHEMA,
     BRONZE_REJECTED_SCHEMA,
 )
 from storage_config import get_data_bucket
@@ -26,8 +30,10 @@ logger = structlog.get_logger()
 
 # Maps source name → (Iceberg schema, partition spec)
 _BRONZE_TABLE_META = {
-    "ecb_rates": (BRONZE_ECB_RATES_SCHEMA, BRONZE_ECB_RATES_PARTITION),
-    "dax_daily": (BRONZE_DAX_DAILY_SCHEMA, BRONZE_DAX_DAILY_PARTITION),
+    "carbon_intensity": (BRONZE_CARBON_INTENSITY_SCHEMA, BRONZE_CARBON_INTENSITY_PARTITION),
+    "mlperf_benchmarks": (BRONZE_MLPERF_BENCHMARKS_SCHEMA, BRONZE_MLPERF_BENCHMARKS_PARTITION),
+    "cloud_gpu_pricing": (BRONZE_CLOUD_GPU_PRICING_SCHEMA, BRONZE_CLOUD_GPU_PRICING_PARTITION),
+    "fx_rates": (BRONZE_FX_RATES_SCHEMA, BRONZE_FX_RATES_PARTITION),
 }
 
 
@@ -38,7 +44,7 @@ class BronzeWriter:
 
     def write(self, df: pd.DataFrame, source: str, ingestion_date: str | None = None) -> str:
         """Append *df* to the Bronze Iceberg table for *source* and return a logical path."""
-        schema, partition_spec = _BRONZE_TABLE_META.get(source, (BRONZE_ECB_RATES_SCHEMA, None))
+        schema, partition_spec = _BRONZE_TABLE_META.get(source, (BRONZE_CARBON_INTENSITY_SCHEMA, None))
 
         iceberg_io.append_table(
             self.catalog,
