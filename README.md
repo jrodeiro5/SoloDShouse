@@ -3,179 +3,341 @@
 <h3 align="center">Solo Data Science House</h3>
 
 <p align="center">
-  A local-first data science + AI agent platform for energy analytics.<br>
-  Built as a TFM at Universidad Complutense de Madrid.
-</p>
-
-<p align="center">
-  DuckDB · Iceberg · Dagster · MLflow · deepagents · LiteLLM · Evidence.dev
+  Local-first data science + AI agent platform for energy analytics.<br>
+  Full ML/AI stack on a single powerful machine — zero cloud surprise bills.
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.13%2B-blue.svg" alt="Python 3.13+">
   <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License">
   <img src="https://img.shields.io/badge/runtime-Docker%20Compose-2496ED.svg" alt="Docker Compose">
-  <img src="https://img.shields.io/badge/table%20format-Iceberg-5C7CFA.svg" alt="Apache Iceberg">
-  <img src="https://img.shields.io/badge/TFM-UCM%20Madrid-red.svg" alt="TFM UCM">
+  <img src="https://img.shields.io/badge/table%20format-Apache%20Iceberg-5C7CFA.svg" alt="Apache Iceberg">
+  <img src="https://img.shields.io/badge/orchestration-Dagster-7B5CFE.svg" alt="Dagster">
+  <img src="https://img.shields.io/badge/AI%20agents-LangGraph-FF6B35.svg" alt="LangGraph">
 </p>
 
 ---
 
 > **Fork of [SoloLakehouse v2.5](https://github.com/Jiahong-Que-9527/SoloLakehouse).**
+> Domain pivot: ECB/DAX financial data → ENTSO-E European energy data + AI inference cost analytics.
 > Original docs preserved in [`docs/sololakehouse_legacy_docs/`](docs/sololakehouse_legacy_docs/).
-> SoloDShouse ADRs and docs live in [`docs/solodshouse/`](docs/solodshouse/).
 
 ---
 
 ## What Is This
 
-SoloDShouse is a **local-first data science and AI agent platform** for European energy data analytics.
+**SoloDShouse** is a complete, self-hosted data science and AI agent platform focused on European energy data.
 
-It extends the SoloLakehouse v2.5 lakehouse baseline with:
-- An **ML layer** for renewable forecasting, price prediction, and anomaly detection
-- An **AI agent layer** (deepagents + Open WebUI) for natural-language data queries
-- A **local LLM layer** (llama.cpp / vLLM / Groq) routed through LiteLLM
+It extends the SoloLakehouse lakehouse baseline with three additional capability layers:
 
-Everything runs on a Mac Studio M4 Max (64 GB) for development and a EUR 5/month Hetzner VPS for staging. No cloud dependency, no surprise bills.
+| Layer | What it does |
+|-------|-------------|
+| **Lakehouse** | Ingest → Bronze → Silver → Gold (Apache Iceberg, Dagster, DuckDB, dbt, Trino) |
+| **ML** | Energy forecasting + AI inference cost modelling (XGBoost, LightGBM, LSTM, MLflow) |
+| **AI Agent** | Natural-language queries over energy data (deepagents, Open WebUI, LiteLLM, MCP tools) |
 
-**This is a TFM** — it must demonstrate all 15 modules of the UCM Master in Big Data, Data Science & AI. The platform covers all 15.
+Runs on a Mac Studio M4 Max (64 GB) for development and a €5/month Hetzner VPS for staging. No cloud lock-in.
 
-## Architecture
+---
+
+## Platform Architecture
 
 ```
-+-------------------------------------------------------------------+
-|  Layer 3: AI Agent                                                |
-|  deepagents (LangGraph) + Open WebUI + ToolUniverse (MCP)        |
-|  "Ask the AI about the energy data"                               |
-+-------------------------------------------------------------------+
-|  Layer 2: ML & Analytics                                          |
-|  MLflow + BentoML + Evidence.dev + LSTM/XGBoost forecasting       |
-+-------------------------------------------------------------------+
-|  Layer 1: Lakehouse                                               |
-|  DuckDB + dbt + Iceberg + SeaweedFS + Dagster + Trino             |
-|  Medallion: Bronze -> Silver -> Gold (all Iceberg)                |
-+-------------------------------------------------------------------+
+╔══════════════════════════════════════════════════════════════════════╗
+║  LAYER 3 — AI AGENT                                                  ║
+║                                                                      ║
+║  ┌─────────────────┐  ┌──────────────┐  ┌──────────────────────┐   ║
+║  │  deepagents     │  │  Open WebUI  │  │  ToolUniverse (MCP)  │   ║
+║  │  (LangGraph)    │  │  Chat UI     │  │  1000+ sci tools     │   ║
+║  └────────┬────────┘  └──────┬───────┘  └──────────┬───────────┘   ║
+║           │                  │                      │               ║
+║  ┌────────▼──────────────────▼──────────────────────▼───────────┐  ║
+║  │  LiteLLM Gateway  →  llama.cpp / vLLM (Mac) / Groq (VPS)    │  ║
+║  └───────────────────────────────────────────────────────────────┘  ║
+║  ┌────────────────┐  ┌───────────────┐  ┌────────────────────┐     ║
+║  │  Langfuse      │  │  mem0 memory  │  │  kotaemon (RAG)    │     ║
+║  │  LLM traces    │  │               │  │  PDF + citations   │     ║
+║  └────────────────┘  └───────────────┘  └────────────────────┘     ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  LAYER 2 — ML & ANALYTICS                                            ║
+║                                                                      ║
+║  ┌───────────────┐  ┌────────────────┐  ┌──────────────────────┐   ║
+║  │  MLflow 3.x   │  │  BentoML       │  │  Evidence.dev BI     │   ║
+║  │  Experiments  │  │  Model serving │  │  Markdown-first      │   ║
+║  └───────────────┘  └────────────────┘  └──────────────────────┘   ║
+║                                                                      ║
+║  Models: XGBoost · LightGBM · LSTM (energy forecast)               ║
+║          AI inference cost model (MLPerf + Azure GPU pricing)       ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  LAYER 1 — LAKEHOUSE (MEDALLION)                                     ║
+║                                                                      ║
+║  External Sources                                                    ║
+║  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐     ║
+║  │  ENTSO-E     │  │  MLCommons   │  │  Azure Retail Prices  │     ║
+║  │  Energy API  │  │  MLPerf CSV  │  │  FRED FX Rates        │     ║
+║  └──────┬───────┘  └──────┬───────┘  └──────────┬────────────┘     ║
+║         │                 │                      │                  ║
+║         ▼                 ▼                      ▼                  ║
+║  ┌─────────────────────────────────────────────────────────────┐    ║
+║  │  BRONZE  (append-only Iceberg, day-partitioned)             │    ║
+║  │  entsoe_generation · mlperf_benchmarks · cloud_gpu_pricing  │    ║
+║  └──────────────────────────┬──────────────────────────────────┘    ║
+║                             │  Dagster SDAs                         ║
+║                             ▼                                       ║
+║  ┌─────────────────────────────────────────────────────────────┐    ║
+║  │  SILVER  (cleaned, typed, deduped — full overwrite)         │    ║
+║  │  mlperf_efficiency · cloud_gpu_pricing                      │    ║
+║  └──────────────────────────┬──────────────────────────────────┘    ║
+║                             │  dbt + MetricFlow                     ║
+║                             ▼                                       ║
+║  ┌─────────────────────────────────────────────────────────────┐    ║
+║  │  GOLD  (ML-ready features — DuckDB queryable)               │    ║
+║  │  ai_inference_cost · energy_forecast_features               │    ║
+║  └─────────────────────────────────────────────────────────────┘    ║
+║                                                                      ║
+║  Storage: SeaweedFS (S3-compatible)  ·  Catalog: Hive Metastore     ║
+║  Query:   Trino (federated SQL)      ·  DuckDB (local / agent path) ║
+║  DB:      PostgreSQL 17 + pgvector + PostGIS                        ║
+╚══════════════════════════════════════════════════════════════════════╝
 ```
 
-## Domain: European Energy Data
+---
+
+## Domain: AI Inference Energy & Cost
+
+SoloDShouse tracks the **real cost of running AI** — compute, energy, and money.
 
 | Source | Data | Access |
 |--------|------|--------|
-| ENTSO-E Transparency Platform | Generation, consumption, cross-border flows, day-ahead prices | Free API (entsoe-py), registration required |
-| Open-Meteo | Historical + forecast weather (temperature, wind, solar) | Free, no key needed |
-| Kaggle: Hourly Energy Spain | Demand/generation/prices 2015-2018 | CC0, CSV |
+| [ENTSO-E Transparency Platform](https://transparency.entsoe.eu/) | European grid generation mix, consumption, prices | Free API (`entsoe-py`), registration required |
+| [MLCommons MLPerf Inference](https://mlcommons.org/benchmarks/inference-datacenter/) | GPU throughput benchmarks (tokens/sec, energy/token) | Free CSV download |
+| [Azure Retail Prices API](https://prices.azure.com/api/retail/prices) | GPU instance pricing (A100, H100, etc.) | Free, no key |
+| [FRED](https://fred.stlouisfed.org/) | EUR/USD exchange rates | Free API key |
+| [Open-Meteo](https://open-meteo.com/) | Weather (temperature, wind, solar) | Free, no key |
 
-**Why energy?** UCM Madrid is the natural context for ENTSO-E (European grid). Real-world complexity: time-series + spatial (grid nodes) + weather joins + regulatory relevance. Public API, no keys needed for demo.
+**Why this domain?** AI inference is the fastest-growing electricity load in Europe. Combining MLPerf benchmarks + Azure pricing + ENTSO-E grid data enables real cost-per-inference analytics tied to actual grid carbon intensity.
+
+---
 
 ## Tech Stack
 
-| Layer | Component | Note |
-|-------|-----------|------|
-| Object Storage | SeaweedFS | Replaces MinIO (archived Apr 2026) |
-| Metadata DB | PostgreSQL 17 + pgvector + PostGIS | Vectors + geo |
-| Table Format | Apache Iceberg | All layers via pyiceberg |
-| Query Engine | Trino + DuckDB | Trino: federated; DuckDB: local/agent |
-| Transformations | dbt-core + dbt-duckdb | MetricFlow for metrics |
-| Orchestration | Dagster | Assets, schedules, sensors |
-| ML Tracking | MLflow 3.x | Experiment registry |
-| ML Serving | BentoML | Classical models |
-| Agent Harness | deepagents (LangGraph) | + FastAPI proxy |
-| Chat UI | Open WebUI | Self-hosted |
-| LLM Gateway | LiteLLM | Routes to llama.cpp / vLLM / Groq |
-| RAG | kotaemon + LlamaIndex | Multi-user, PDF, citations |
-| Agent Memory | mem0 | Structured memory |
-| MCP Tools | ToolUniverse + FastMCP | 1000+ scientific tools |
-| LLM Audit | garak (NVIDIA) | Vulnerability scanner |
-| Agent Governance | AGT (Microsoft) | Policy enforcement |
-| Data Labeling | Adala | Quality assurance |
-| Observability | Langfuse + Prometheus + Alertmanager | LLM traces + metrics + alerts |
-| BI | Evidence.dev | Markdown-first, git-deployable |
-| NoSQL | MongoDB 7 | UCM module 5 |
-| Docs | Astro Starlight | Static docs site |
+### Infrastructure
 
-## Deployment
+| Component | Role | RAM |
+|-----------|------|:---:|
+| SeaweedFS | S3-compatible object store | ~150 MB |
+| PostgreSQL 17 + pgvector + PostGIS | Metadata DB + vector store + geo | ~300 MB |
+| Apache Hive Metastore | Iceberg catalog for Trino | ~400 MB |
+| Trino | Federated SQL across Iceberg + Postgres | ~1.5 GB |
+| DuckDB | In-process OLAP for local/agent queries | ~100 MB |
 
-```
-DEV (Mac Studio M4 Max, 64 GB, local)
-  docker compose --profile full up
-  LLM: llama.cpp / vLLM local
+### Lakehouse
 
-CI (GitHub Actions)
-  build -> ghcr.io/jrodeiro5/solodshouse-*
-  test -> pytest + ruff + mypy
+| Component | Role |
+|-----------|------|
+| Apache Iceberg via pyiceberg | Table format — all Bronze/Silver/Gold layers |
+| dbt-core + dbt-duckdb | Silver→Gold transforms + MetricFlow metrics |
+| Dagster | Asset orchestration, daily schedules, sensors, asset checks |
 
-STAGING (Hetzner CPX21, 4 GB, ~EUR 5/mo)
-  docker compose --profile core --profile agent up -d
-  LLM: Groq API (free) or SSH tunnel to Mac
-```
+### ML
+
+| Component | Role | RAM |
+|-----------|------|:---:|
+| MLflow 3.x | Experiment tracking + model registry | ~300 MB |
+| BentoML | Classical model serving | ~200 MB |
+| XGBoost + LightGBM + scikit-learn | Tabular ML models | library |
+| LSTM (PyTorch) | Time-series forecasting | library |
+
+### AI Agent
+
+| Component | Role | RAM |
+|-----------|------|:---:|
+| deepagents (LangGraph) | Agent harness — reasoning + tool use | ~200 MB |
+| FastAPI proxy | OpenAI-compatible API → deepagents | ~50 MB |
+| Open WebUI | Self-hosted chat UI | ~300 MB |
+| LiteLLM | Unified LLM gateway (100+ providers) | ~150 MB |
+| kotaemon + LlamaIndex | RAG with multi-user support + citations | ~1–2 GB |
+| mem0 | Structured agent memory | ~100 MB |
+| ToolUniverse + FastMCP | 1000+ scientific MCP tools | ~50 MB |
+| AGT (Microsoft) | Agent governance / policy enforcement | library |
+| garak (NVIDIA) | LLM vulnerability scanner | CLI |
+| Adala | Data labeling agent | library |
+
+### Observability
+
+| Component | Role |
+|-----------|------|
+| Langfuse | LLM traces + eval + prompt management |
+| Prometheus + node_exporter | System metrics |
+| Alertmanager + Apprise | Alerts to Telegram / Slack |
+
+### BI & Docs
+
+| Component | Role |
+|-----------|------|
+| Evidence.dev | Primary BI — markdown-first, git-deployable |
+| MongoDB 7 | NoSQL document store |
+| Astro Starlight | Docs site |
+| nginx | Central service portal |
+
+---
+
+## Docker Compose Profiles
+
+| Profile | Services | RAM |
+|---------|----------|:---:|
+| `core` | Postgres, SeaweedFS, Dagster, Hive, Trino | ~2.8 GB |
+| `ml` | core + MLflow, BentoML | ~3.3 GB |
+| `agent` | ml + deepagents, Open WebUI, LiteLLM, FastAPI proxy, mem0, kotaemon, ToolUniverse, garak, AGT | ~5.4 GB |
+| `observability` | Langfuse, Prometheus, Alertmanager | ~0.45 GB |
+| `bi` | Evidence.dev, nginx portal, Astro Starlight | ~0.4 GB |
+| **`full`** | core + ml + agent + observability + bi + MongoDB + Adala | **~6.6 GB** |
+| `llm-7b` | full + llama.cpp 7B | **~12.6 GB** |
+| `llm-70b` | full + vLLM 70B | **~56.6 GB** |
+| `+spark` | Spark on-demand add-on | **+4 GB** |
+
+---
 
 ## Quick Start
 
 ```bash
 git clone https://github.com/jrodeiro5/SoloDShouse.git
 cd SoloDShouse
-make setup
-make verify
-make demo
+cp .env.example .env          # set ENTSOE_API_KEY, FRED_API_KEY
+make up                        # starts core profile
+make verify                    # health-check all services
+make pipeline                  # run Dagster full_pipeline_job
 ```
 
-Key UIs after `make up`:
+**Service UIs after `make up`:**
 
-| UI | URL |
-|----|-----|
-| Dagster | http://localhost:3000 |
-| Open WebUI | http://localhost:3001 |
-| Evidence.dev | http://localhost:3002 |
-| MLflow | http://localhost:5000 |
-| Trino | http://localhost:8080 |
-| SeaweedFS | http://localhost:9333 |
-| Portal | http://localhost:8090 |
+| UI | URL | Profile |
+|----|-----|---------|
+| Dagster | http://localhost:3000 | core |
+| Open WebUI | http://localhost:3001 | agent |
+| Evidence.dev | http://localhost:3002 | bi |
+| MLflow | http://localhost:5000 | ml |
+| Trino | http://localhost:8080 | core |
+| SeaweedFS | http://localhost:9333 | core |
+| Langfuse | http://localhost:3003 | observability |
+| Portal | http://localhost:8090 | bi |
+
+**Useful make targets:**
+
+```bash
+make up              # Start core stack
+make down            # Stop (data preserved under docker/data/)
+make pipeline        # Run full Dagster pipeline
+make dagster-ui      # Open Dagster at http://localhost:3000
+make test            # Unit tests (no Docker required)
+make lint            # ruff
+make typecheck       # mypy
+make clean           # Stop + wipe all data
+```
+
+---
+
+## Deployment
+
+```
+DEV — Mac Studio M4 Max (64 GB, Apple Silicon)
+  docker compose --profile full up
+  LLM inference: llama.cpp or vLLM locally
+
+STAGING — Hetzner CPX21 (4 GB RAM, 40 GB disk, ~€5/mo)
+  docker compose --profile core --profile agent up -d
+  LLM: Groq API (free tier) or SSH tunnel to Mac
+
+CI — GitHub Actions
+  build → ghcr.io/jrodeiro5/solodshouse-*
+  test  → pytest + ruff + mypy
+```
+
+> VPS constraint: 4 GB RAM — never run LLM inference there. Route via LiteLLM → Groq API.
+
+---
 
 ## Monthly Cost
 
 | Item | Cost |
 |------|:----:|
 | Mac Studio M4 Max | owned |
-| Hetzner CPX21 VPS | EUR 5.01 |
-| Groq API (LLM on VPS) | EUR 0 (free tier) |
-| ENTSO-E API | EUR 0 |
-| Open-Meteo API | EUR 0 |
-| **Total** | **~EUR 5-25/mo** |
+| Hetzner CPX21 VPS | €5.01 |
+| Groq API | €0 (free tier) |
+| ENTSO-E API | €0 |
+| Open-Meteo API | €0 |
+| FRED API | €0 |
+| **Total** | **~€5/mo** |
 
-## UCM Module Coverage
+---
 
-| # | Module | How |
-|:-:|--------|-----|
-| 1 | Business Intelligence | Evidence.dev + Open WebUI |
-| 2 | SQL | DuckDB + dbt + Trino |
-| 3 | Tableau | Tableau Desktop -> DuckDB/PG |
-| 4 | Python Programming | Full Python stack |
-| 5 | NoSQL Databases | MongoDB + pgvector |
-| 6 | Statistics | Time-series stats, hypothesis tests |
-| 7 | Data Mining | Anomaly detection, clustering (grid events) |
-| 8 | Machine Learning | XGBoost/LightGBM energy forecasting |
-| 9 | Data Visualization | Evidence.dev + Open WebUI charts |
-| 10 | Deep Learning / CNN / RNN / LLMs | LSTM forecasting + llama.cpp/vLLM agent |
-| 11 | Spark | PySpark on-demand profile |
-| 12 | Big Data Technologies | Iceberg + Spark + SeaweedFS |
-| 13 | Model Productivization | MLflow -> BentoML -> Langfuse monitoring |
-| 14 | TFM Context | Energy utility use case (IberGrid framing) |
-| 15 | Applied Data Science | ENTSO-E -> lakehouse -> ML -> agent |
+## Project Layout
+
+```
+ingestion/
+  collectors/         # MLPerfCollector, CloudPricingCollector, ENTSOECollector
+  schema/             # Pydantic v2 models
+  quality/            # Bronze-layer quality checks
+  bronze_writer.py    # Iceberg append (Bronze layer)
+  iceberg_io.py       # append_table, overwrite_table, scan_table
+  iceberg_schemas.py  # Iceberg Schema + PartitionSpec definitions
+
+transformations/
+  mlperf_bronze_to_silver.py      # MLPerf efficiency transform
+  pricing_bronze_to_silver.py     # Azure GPU pricing: dedup, EUR convert
+  dbt/                            # Silver→Gold dbt models (Phase H)
+
+ml/
+  train_energy_forecast.py        # XGBoost/LightGBM + LSTM forecasting
+  evaluate.py                     # MLflow experiment runner
+
+agents/
+  deepagents_proxy.py             # FastAPI: OpenAI API → deepagents
+  tools/                          # MCP tools (ENTSO-E queries, Iceberg reads)
+
+dagster/
+  assets.py                       # Software-defined assets
+  definitions.py                  # Jobs, schedules, sensors
+  resources.py                    # IcebergCatalogResource, PipelineConfigResource
+
+docs/
+  solodshouse/decisions/          # SDS-XXX Architecture Decision Records
+  sololakehouse_legacy_docs/      # Original fork docs (read-only)
+
+tests/                            # Unit tests (mocked I/O, no Docker)
+scripts/                          # init-iceberg-namespaces.py, verify-setup.py
+```
+
+---
 
 ## Documentation
 
-- [TFM Architecture Guide](docs/solodshouse/tfm-architecture-guide.md)
-- [Session Memory & Decisions](docs/solodshouse/session-memory.md)
-- [SoloDShouse ADRs](docs/solodshouse/decisions/README.md) (SDS-XXX)
-- [SoloLakehouse Legacy Docs](docs/sololakehouse_legacy_docs/README.md) (read-only)
+- [Architecture Decision Records](docs/solodshouse/decisions/) — All SDS-XXX ADRs
+- [Session Notes](docs/solodshouse/session-memory.md) — Design decisions log
+- [SoloLakehouse Legacy Docs](docs/sololakehouse_legacy_docs/) — Upstream ADRs 001–020 (read-only)
+
+---
 
 ## Origin
 
 SoloDShouse is a fork of [SoloLakehouse](https://github.com/Jiahong-Que-9527/SoloLakehouse) v2.5.
 
-Key divergences from upstream: domain pivot (ECB/DAX -> ENTSO-E), AI agent layer (deepagents), local LLM (llama.cpp/vLLM), SeaweedFS replaces MinIO, DuckDB added, OpenMetadata + Superset eliminated, Spark on-demand only, Evidence.dev as BI.
+Key divergences from upstream:
 
-See [SDS ADRs](docs/solodshouse/decisions/README.md) for all fork decisions.
+| Aspect | Upstream | SoloDShouse |
+|--------|----------|-------------|
+| Domain | ECB interest rates + DAX prices | ENTSO-E energy + AI inference cost |
+| Object store | MinIO (archived Apr 2026) | SeaweedFS |
+| Local query | — | DuckDB |
+| AI agents | — | deepagents (LangGraph) |
+| Local LLM | — | llama.cpp / vLLM + LiteLLM |
+| BI | Superset (eliminated) | Evidence.dev |
+| Catalog UI | OpenMetadata (eliminated) | dbt docs + MetricFlow |
+| Spark | Always-on | On-demand profile |
+
+See [SDS ADRs](docs/solodshouse/decisions/) for all fork decisions.
+
+---
 
 ## License
 
