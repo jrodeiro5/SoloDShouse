@@ -1,4 +1,8 @@
 name: CI
+# Local runner: install act (https://github.com/nektos/act) then run:
+#   act push                  # full CI
+#   act push -j lint          # single job
+#   act push -j test          # skip compose-demo (needs Docker-in-Docker)
 on: [push, pull_request]
 
 jobs:
@@ -20,8 +24,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      # dagster/ imports the PyPI dagster package; install it so mypy does not
-      # treat the local dagster/ code folder as the dagster module.
+      # dagster/ imports the PyPI dagster package; install so mypy does not
+      # treat the local dagster/ folder as the module.
       - run: pip install -r requirements.txt -r requirements-dagster.txt
       - run: mypy ingestion/ transformations/ ml/ scripts/ dagster/
 
@@ -45,21 +49,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Run full v2.5 demo path
+      - name: Start core stack and run pipeline
         run: |
-          make setup
-          make demo
+          make up
+          make pipeline
       - name: Show container logs on failure
         if: failure()
         run: |
           docker ps -a
-          docker logs --tail 200 slh-postgres || true
-          docker logs --tail 200 slh-minio || true
-          docker logs --tail 200 slh-hive-metastore || true
-          docker logs --tail 200 slh-trino || true
-          docker logs --tail 200 slh-dagster-webserver || true
-          docker logs --tail 200 slh-dagster-daemon || true
-          docker logs --tail 200 slh-mlflow || true
+          docker logs --tail 200 sds-postgres || true
+          docker logs --tail 200 sds-seaweedfs || true
+          docker logs --tail 200 sds-hive-metastore || true
+          docker logs --tail 200 sds-trino || true
+          docker logs --tail 200 sds-dagster-webserver || true
+          docker logs --tail 200 sds-dagster-daemon || true
+          docker logs --tail 200 sds-mlflow || true
       - name: Stop stack
         if: always()
         run: make down

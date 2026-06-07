@@ -31,6 +31,15 @@ What happened instead.
 - Docker:
 - Branch/Commit:
 
+## Layer
+
+- [ ] Lakehouse / Iceberg / Dagster
+- [ ] ML / MLflow / BentoML
+- [ ] Agent / deepagents / MCP
+- [ ] Observability / Langfuse / Prometheus
+- [ ] BI / Evidence.dev
+- [ ] Infra / Docker Compose
+
 ## Logs / Screenshots
 
-Paste relevant logs (for example from `make verify` / `make demo` / `make pipeline`).
+Paste relevant logs (for example from `make verify` / `make pipeline` / `make test`).
