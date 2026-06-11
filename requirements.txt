@@ -10,7 +10,7 @@ lightgbm==4.6.0
 mlflow==3.11.1
 boto3==1.38.27
 scikit-learn==1.8.0
-pytest==9.0.2
+pytest==9.0.3
 pytest-cov==7.1.0
 ruff==0.15.7
 mypy==1.19.1
