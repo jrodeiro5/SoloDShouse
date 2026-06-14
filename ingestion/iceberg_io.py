@@ -58,18 +58,24 @@ def get_catalog(
     """
     from pyiceberg.catalog.hive import HiveCatalog
 
+    from storage_config import get_storage_config
+
+    storage_cfg = get_storage_config()
     store_ep = os.environ.get("OBJECT_STORE_ENDPOINT", "http://localhost:8333")
-    data_bucket = os.environ.get("DATA_BUCKET", os.environ.get("BUCKET_NAME", "solodshouse-data"))
     # WAREHOUSE_URI is s3a:// for Hadoop; pyiceberg uses s3://
-    raw_warehouse = os.environ.get("WAREHOUSE_URI", f"s3://{data_bucket}/warehouse/")
+    raw_warehouse = storage_cfg.warehouse_uri
     effective_warehouse = raw_warehouse.replace("s3a://", "s3://")
 
     props: dict[str, str] = {
         "uri": uri or os.environ.get("HIVE_METASTORE_URI", "thrift://localhost:9083"),
         "warehouse": warehouse or effective_warehouse,
         "s3.endpoint": s3_endpoint or store_ep,
-        "s3.access-key-id": access_key or os.environ.get("S3_ACCESS_KEY", os.environ.get("OBJECT_STORE_ACCESS_KEY", "solodshouse")),
-        "s3.secret-access-key": secret_key or os.environ.get("S3_SECRET_KEY", os.environ.get("OBJECT_STORE_SECRET_KEY", "solodshouse123")),
+        "s3.access-key-id": access_key or os.environ.get(
+            "S3_ACCESS_KEY", os.environ.get("OBJECT_STORE_ACCESS_KEY", "solodshouse")
+        ),
+        "s3.secret-access-key": secret_key or os.environ.get(
+            "S3_SECRET_KEY", os.environ.get("OBJECT_STORE_SECRET_KEY", "solodshouse123")
+        ),
         "s3.path-style-access": "true",
     }
     return HiveCatalog(name, **props)

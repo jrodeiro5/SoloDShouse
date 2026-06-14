@@ -13,17 +13,11 @@ DEFAULT_STORAGE_CONFIG = get_storage_config()
 class IcebergCatalogResource(ConfigurableResource):
     """Configurable pyiceberg HiveCatalog resource for all medallion writes."""
 
-    hive_metastore_uri: str = os.environ.get(
-        "HIVE_METASTORE_URI", "thrift://localhost:9083"
-    )
-    warehouse: str = DEFAULT_STORAGE_CONFIG.warehouse_uri.replace("s3a://", "s3://")
-    s3_endpoint: str = os.environ.get("OBJECT_STORE_ENDPOINT", "http://localhost:8333")
-    access_key: str = os.environ.get(
-        "S3_ACCESS_KEY", os.environ.get("OBJECT_STORE_ACCESS_KEY", "solodshouse")
-    )
-    secret_key: str = os.environ.get(
-        "S3_SECRET_KEY", os.environ.get("OBJECT_STORE_SECRET_KEY", "solodshouse123")
-    )
+    hive_metastore_uri: str | None = None
+    warehouse: str | None = None
+    s3_endpoint: str | None = None
+    access_key: str | None = None
+    secret_key: str | None = None
 
     def get_catalog(self):  # type: ignore[return]
         from ingestion.iceberg_io import get_catalog
