@@ -429,43 +429,6 @@ services:
       retries: 5
       start_period: 10s
 
-  # ── Agent Infrastructure ────────────────────────────────────────────────
-
-  mem0:
-    image: mem0/mem0:latest
-    container_name: sds-mem0
-    profiles: ["agent", "full", "llm-12b", "llm-70b"]
-    ports:
-      - "${MEM0_PORT:-8050}:8050"
-    volumes:
-      - ./data/mem0:/app/data
-    environment:
-      MEM0_TELEMETRY: "false"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8050/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
-
-  kotaemon:
-    image: ghcr.io/cinnamon/kotaemon:main
-    container_name: sds-kotaemon
-    profiles: ["agent", "full", "llm-12b", "llm-70b"]
-    ports:
-      - "${KOTAEMON_PORT:-3004}:7860"
-    volumes:
-      - ./data/kotaemon:/app/ktem_app_data
-    environment:
-      OPENAI_API_BASE: http://litellm:4000/v1
-      OPENAI_API_KEY: ${LITELLM_MASTER_KEY:-sk-litellm-master-key-change-me}
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7860"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
   # ── BI ──────────────────────────────────────────────────────────────────
 
   evidence:
