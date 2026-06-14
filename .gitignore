@@ -52,3 +52,4 @@ scripts/ucm/
 
 # UCM legacy DuckDB — keep local only
 data/ucm_guidelines.duckdb
+discover_test_source.duckdb

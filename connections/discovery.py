@@ -101,14 +101,19 @@ class SchemaDiscovery:
         table = config.table or source
         try:
             import dlt
+            from dlt.sources import sql_database
 
             pipeline = dlt.pipeline(
                 pipeline_name=f"discover_{source}",
                 destination="duckdb",
                 dataset_name="bronze",
             )
-            src = dlt.sources.sql_database(
-                f"postgresql://{config.user}:****@{config.host}:{config.port}/{config.database}",
+            conn_str = (
+                f"postgresql://{config.user}:{config.password}"
+                f"@{config.host}:{config.port}/{config.database}"
+            )
+            src = sql_database.sql_database(
+                credentials=conn_str,
                 schema=config.schema,
                 table_names=[table],
             )
@@ -123,13 +128,14 @@ class SchemaDiscovery:
         bucket = config.bucket
         try:
             import dlt
+            from dlt.sources import filesystem
 
             pipeline = dlt.pipeline(
                 pipeline_name=f"discover_{source}",
                 destination="duckdb",
                 dataset_name="bronze",
             )
-            src = dlt.sources.filesystem(
+            src = filesystem.filesystem(
                 bucket_url=f"s3://{bucket}/{prefix}",
                 file_glob=config.file_glob,
             )
@@ -163,18 +169,25 @@ class SchemaDiscovery:
         except ImportError:
             logger.warning("dlt_not_installed", hint="pip install dlt[duckdb]")
             return _fallback_columns()
+        except Exception as exc:
+            logger.warning(
+                "rest_probe_failed", source=source, url=full_url[:120],
+                error=str(exc)[:200],
+            )
+            return _fallback_columns()
 
     def _probe_filesystem(self, source: str, config: FilesystemConfig) -> list[dict[str, Any]]:
         path = config.path or f"./data/{source}"
         try:
             import dlt
+            from dlt.sources import filesystem
 
             pipeline = dlt.pipeline(
                 pipeline_name=f"discover_{source}",
                 destination="duckdb",
                 dataset_name="bronze",
             )
-            src = dlt.sources.filesystem(
+            src = filesystem.filesystem(
                 bucket_url=path,
                 file_glob=config.file_glob,
             )
