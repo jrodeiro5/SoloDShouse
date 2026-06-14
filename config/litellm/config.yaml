@@ -5,14 +5,16 @@
 model_list:
   - model_name: fast
     litellm_params:
-      model: openai/fast
+      model: openai/gemma-4-12b
       api_base: ${LLM_API_BASE:-http://llama-cpp:8080/v1}
       api_key: ${LLM_API_KEY:-not-needed}
+      rpm: 60
   - model_name: powerful
     litellm_params:
-      model: openai/powerful
+      model: openai/gemma-4-12b
       api_base: ${LLM_API_BASE:-http://llama-cpp:8080/v1}
       api_key: ${LLM_API_KEY:-not-needed}
+      rpm: 30
 
 general_settings:
   master_key: ${LITELLM_MASTER_KEY}

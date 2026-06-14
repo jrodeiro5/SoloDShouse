@@ -299,3 +299,31 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+
+  # ── LLM Inference (llama.cpp) ───────────────────────────────────────────
+
+  llama-cpp:
+    image: ghcr.io/ggerganov/llama.cpp:server
+    container_name: sds-llama-cpp
+    profiles: ["llm", "llm-12b"]
+    ports:
+      - "${LLAMA_CPP_PORT:-8081}:8080"
+    volumes:
+      - ${LLAMA_MODEL_DIR:-./docker/data/models}:/models:ro
+    command:
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8080"
+      - "--model"
+      - "/models/${LLAMA_MODEL_FILE:-gemma-4-12b-Q4_K_M.gguf}"
+      - "--n-gpu-layers"
+      - "${LLAMA_N_GPU_LAYERS:-99}"
+      - "--ctx-size"
+      - "${LLAMA_CTX_SIZE:-8192}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
