@@ -2,18 +2,17 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl libgomp1 gcc && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends curl libgomp1 && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt requirements-dagster.txt ./
-RUN pip install --no-cache-dir -r requirements.txt -r requirements-dagster.txt
+COPY pyproject.toml requirements-dagster.txt ./
+RUN pip install --no-cache-dir -r requirements-dagster.txt && pip install --no-cache-dir -e .
 
 COPY ingestion ./ingestion
 COPY transformations ./transformations
 COPY ml ./ml
+COPY connections ./connections
 COPY scripts ./scripts
 COPY dagster ./dagster
-COPY data ./data
-COPY runtime_identity.py ./runtime_identity.py
 COPY storage_config.py ./storage_config.py
 
 ENV PYTHONPATH=/app
