@@ -111,4 +111,41 @@ _bronze_assets = make_bronze_assets()
 _bronze_freshness_sensor = _make_freshness_sensor()
 
 bronze_assets = _bronze_assets
-all_assets = [*_bronze_assets]
+
+
+# ── dbt Transform Asset (Silver → Gold) ──────────────────────────────────────
+
+@asset(
+    name="dbt_run",
+    group_name="gold",
+    deps=[AssetKey(f"{name}_bronze") for name in list_sources()],
+    description="Run dbt models on ingested Bronze sources.",
+)
+def dbt_run_asset(context) -> dict[str, Any]:
+    import subprocess
+    from pathlib import Path
+
+    sources = list_sources()
+    if not sources:
+        context.log.info("dbt_run_skipped: no bronze sources registered")
+        return {"models": 0, "status": "skipped"}
+
+    started = time.perf_counter()
+    dbt_dir = Path(__file__).resolve().parents[1] / "transformations" / "dbt"
+    target = dbt_dir / "target" / "gold.duckdb"
+
+    result = subprocess.run(
+        ["dbt", "run", "--project-dir", str(dbt_dir), "--profiles-dir", str(dbt_dir)],
+        capture_output=True, text=True, timeout=120,
+        env={"DBT_DUCKDB_PATH": str(target), "PATH": __import__("os").environ["PATH"]},
+    )
+    if result.returncode != 0:
+        context.log.error("dbt_run_failed", stderr=result.stderr[-500:])
+        raise RuntimeError(f"dbt run failed: {result.stderr[-300:]}")
+
+    _emit_metric("dbt_run", started)
+    context.add_output_metadata({"sources": len(sources), "stdout": result.stdout[-500:]})
+    return {"models": len(sources), "status": "success"}
+
+
+all_assets = [*_bronze_assets, dbt_run_asset]
