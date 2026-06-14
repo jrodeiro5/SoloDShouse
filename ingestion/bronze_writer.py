@@ -22,6 +22,8 @@ from ingestion.iceberg_schemas import (
     BRONZE_MLPERF_BENCHMARKS_PARTITION,
     BRONZE_MLPERF_BENCHMARKS_SCHEMA,
     BRONZE_REJECTED_SCHEMA,
+    load_schema_config,
+    schema_from_config,
 )
 from storage_config import get_data_bucket
 
@@ -30,7 +32,9 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger()
 
-# Maps source name → (Iceberg schema, partition spec)
+# DEPRECATED: hardcoded table metadata — retained for backward compatibility
+# during migration to YAML-driven schemas (SDS-043).
+# New sources should define their schema in config/schemas/{source}.yaml.
 _BRONZE_TABLE_META = {
     "carbon_intensity": (BRONZE_CARBON_INTENSITY_SCHEMA, BRONZE_CARBON_INTENSITY_PARTITION),
     "mlperf_benchmarks": (BRONZE_MLPERF_BENCHMARKS_SCHEMA, BRONZE_MLPERF_BENCHMARKS_PARTITION),
@@ -40,6 +44,19 @@ _BRONZE_TABLE_META = {
 }
 
 
+def _resolve_schema(source: str) -> tuple[Any, Any]:
+    """Resolve Iceberg (schema, partition_spec) for *source*.
+
+    Priority: YAML config → hardcoded fallback → default.
+    """
+    try:
+        config = load_schema_config(source)
+        return schema_from_config(config)
+    except FileNotFoundError:
+        pass
+    return _BRONZE_TABLE_META.get(source, (BRONZE_CARBON_INTENSITY_SCHEMA, None))
+
+
 class BronzeWriter:
     def __init__(self, catalog: "Catalog", bucket: str | None = None):
         self.catalog = catalog
@@ -47,7 +64,7 @@ class BronzeWriter:
 
     def write(self, df: pd.DataFrame, source: str) -> str:
         """Append *df* to the Bronze Iceberg table for *source* and return a logical path."""
-        schema, partition_spec = _BRONZE_TABLE_META.get(source, (BRONZE_CARBON_INTENSITY_SCHEMA, None))
+        schema, partition_spec = _resolve_schema(source)
 
         iceberg_io.append_table(
             self.catalog,

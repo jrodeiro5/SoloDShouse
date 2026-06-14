@@ -25,6 +25,8 @@ import requests
 import structlog
 
 from ingestion.bronze_writer import BronzeWriter
+from ingestion.collectors.base import BaseCollector
+from ingestion.collectors.registry import register_collector
 from ingestion.exceptions import CollectorUnavailableError
 from ingestion.http import make_session
 from ingestion.schema.mlperf_records import MLPerfRecord
@@ -56,9 +58,10 @@ _DEFAULT_COLUMN_MAP: dict[str, str] = {
 _LLM_MODELS = {"llama2-70b", "llama2-7b", "mixtral-8x7b", "gpt-j-6b", "llama3-70b", "llama3-8b"}
 
 
-class MLPerfCollector:
+@register_collector("mlperf_benchmarks")
+class MLPerfCollector(BaseCollector):
     def __init__(self, catalog: "Catalog"):
-        self.catalog = catalog
+        super().__init__(catalog)
         self.bronze_writer = BronzeWriter(catalog)
 
     def _fetch_data(self, csv_url: str) -> pd.DataFrame:
@@ -124,5 +127,8 @@ class MLPerfCollector:
         if rejected:
             self.bronze_writer.write_rejected(rejected, source="mlperf_benchmarks")
 
-        logger.info("mlperf_collect_done", round_id=round_id, valid=len(valid), rejected=len(rejected))
+        logger.info(
+            "mlperf_collect_done",
+            round_id=round_id, valid=len(valid), rejected=len(rejected),
+        )
         return {"round_id": round_id, "valid": len(valid), "rejected": len(rejected)}

@@ -1,4 +1,4 @@
-"""Dagster definitions for SoloDShouse AI energy cost domain."""
+"""Dagster definitions for SoloDShouse — auto-discovered from registry (SDS-043)."""
 
 from __future__ import annotations
 
@@ -12,19 +12,12 @@ if THIS_DIR not in sys.path:
     sys.path.insert(0, THIS_DIR)
 
 from assets import (  # noqa: E402
-    cloud_pricing_bronze,
-    cloud_pricing_silver,
-    cloud_pricing_silver_min_rows_check,
-    mlperf_bronze,
+    all_assets,
+    bronze_assets,
+    make_silver_checks,
     mlperf_freshness_sensor,
-    mlperf_silver,
-    mlperf_silver_min_rows_check,
 )
 from resources import IcebergCatalogResource, PipelineConfigResource  # noqa: E402
-
-bronze_assets = [mlperf_bronze, cloud_pricing_bronze]
-silver_assets = [mlperf_silver, cloud_pricing_silver]
-all_assets = [*bronze_assets, *silver_assets]
 
 full_pipeline_job = define_asset_job(
     name="full_pipeline_job",
@@ -43,9 +36,11 @@ daily_pipeline_schedule = ScheduleDefinition(
     execution_timezone="UTC",
 )
 
+_silver_checks = make_silver_checks()
+
 defs = Definitions(
     assets=all_assets,
-    asset_checks=[mlperf_silver_min_rows_check, cloud_pricing_silver_min_rows_check],
+    asset_checks=_silver_checks,
     jobs=[full_pipeline_job, bronze_only_job],
     schedules=[daily_pipeline_schedule],
     sensors=[mlperf_freshness_sensor],

@@ -1,0 +1,25 @@
+# Schema for MLCommons MLPerf inference benchmark Bronze table (SDS-043).
+# Source: collector mlperf_benchmarks → MLPerfCollector
+source: mlperf_benchmarks
+bronze_table: mlperf_benchmarks
+namespace: bronze
+columns:
+  - name: round_id
+    type: string
+  - name: model_name
+    type: string
+  - name: accelerator
+    type: string
+  - name: submitter
+    type: string
+  - name: scenario
+    type: string
+  - name: tokens_per_sec
+    type: double
+  - name: _ingestion_timestamp
+    type: timestamptz
+  - name: _source
+    type: string
+partition:
+  field: _ingestion_timestamp
+  transform: day

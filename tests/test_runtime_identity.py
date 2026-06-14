@@ -39,7 +39,7 @@ def test_empty_env_mapping_does_not_read_process_environment() -> None:
 
     assert identity.product_id == "solodshouse"
     assert identity.display_name == "SoloDShouse"
-    assert identity.domain == "energy_ai_cost"
+    assert identity.domain == "default"
     assert identity.environment == "local"
     assert identity.runtime_version == "sds-v0.1.0"
     assert identity.compose_project_name == "solodshouse"

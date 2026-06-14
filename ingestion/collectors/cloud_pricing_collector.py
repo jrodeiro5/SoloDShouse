@@ -18,6 +18,8 @@ import requests
 import structlog
 
 from ingestion.bronze_writer import BronzeWriter
+from ingestion.collectors.base import BaseCollector
+from ingestion.collectors.registry import register_collector
 from ingestion.exceptions import CollectorUnavailableError
 from ingestion.http import make_session
 from ingestion.schema.pricing_records import CloudPricingRecord, FXRecord
@@ -34,9 +36,10 @@ _FRED_URL = "https://api.stlouisfed.org/fred/series/observations"
 _GPU_SKU_KEYWORDS = ("NC", "ND", "NV", "NG", "Standard_N")
 
 
-class CloudPricingCollector:
+@register_collector("cloud_gpu_pricing")
+class CloudPricingCollector(BaseCollector):
     def __init__(self, catalog: "Catalog"):
-        self.catalog = catalog
+        super().__init__(catalog)
         self.bronze_writer = BronzeWriter(catalog)
 
     # ── Azure ─────────────────────────────────────────────────────────────────
@@ -131,6 +134,16 @@ class CloudPricingCollector:
             except (ValueError, KeyError, TypeError) as exc:
                 rejected.append({**row, "rejection_reason": str(exc)})
         return valid, rejected
+
+    # ── abstract interface methods ────────────────────────────────────────────
+
+    def _fetch_data(self, **kwargs: str) -> list[dict]:
+        """Unified fetch for BaseCollector interface — delegates to Azure fetch."""
+        return self._fetch_azure_gpu_prices(**kwargs)
+
+    def _validate_records(self, raw: list[dict]) -> tuple[list[dict], list[dict]]:
+        """Unified validate for BaseCollector interface — delegates to Azure."""
+        return self._validate_azure_records(raw)
 
     # ── collect ───────────────────────────────────────────────────────────────
 

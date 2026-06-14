@@ -1,0 +1,25 @@
+# Schema for Azure GPU instance pricing Bronze table (SDS-043).
+# Source: collector cloud_gpu_pricing → CloudPricingCollector
+source: cloud_gpu_pricing
+bronze_table: cloud_gpu_pricing
+namespace: bronze
+columns:
+  - name: provider
+    type: string
+  - name: instance_type
+    type: string
+  - name: region
+    type: string
+  - name: price_usd_per_hour
+    type: double
+  - name: sku_name
+    type: string
+  - name: captured_at
+    type: timestamptz
+  - name: _ingestion_timestamp
+    type: timestamptz
+  - name: _source
+    type: string
+partition:
+  field: _ingestion_timestamp
+  transform: day

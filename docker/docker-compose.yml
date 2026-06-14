@@ -130,7 +130,7 @@ services:
       HIVE_METASTORE_URI: thrift://hive-metastore:9083
       PRODUCT_ID: ${PRODUCT_ID:-solodshouse}
       PRODUCT_DISPLAY_NAME: ${PRODUCT_DISPLAY_NAME:-SoloDShouse}
-      PRODUCT_DOMAIN: ${PRODUCT_DOMAIN:-energy_ai_cost}
+      PRODUCT_DOMAIN: ${PRODUCT_DOMAIN:-default}
       ENVIRONMENT: ${ENVIRONMENT:-local}
       RUNTIME_VERSION: ${RUNTIME_VERSION:-sds-v0.1.0}
       OBJECT_STORE_ENDPOINT: http://seaweedfs:8333
@@ -182,7 +182,7 @@ services:
       HIVE_METASTORE_URI: thrift://hive-metastore:9083
       PRODUCT_ID: ${PRODUCT_ID:-solodshouse}
       PRODUCT_DISPLAY_NAME: ${PRODUCT_DISPLAY_NAME:-SoloDShouse}
-      PRODUCT_DOMAIN: ${PRODUCT_DOMAIN:-energy_ai_cost}
+      PRODUCT_DOMAIN: ${PRODUCT_DOMAIN:-default}
       ENVIRONMENT: ${ENVIRONMENT:-local}
       RUNTIME_VERSION: ${RUNTIME_VERSION:-sds-v0.1.0}
       OBJECT_STORE_ENDPOINT: http://seaweedfs:8333

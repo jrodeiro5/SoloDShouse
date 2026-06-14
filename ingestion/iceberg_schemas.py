@@ -2,11 +2,18 @@
 
 Domain: AI inference energy & cost (SDS-040).
 Sources: Electricity Maps, MLCommons MLPerf, Azure/AWS pricing, FRED FX rates.
-Status: design-time estimates — see SDS-041 for open questions.
+
+The hardcoded schemas below are **deprecated** in favour of YAML-driven schemas
+(see ``config/schemas/``).  Use ``schema_from_config()`` for new sources.
+Existing schemas kept for backward compatibility during migration (SDS-043).
 """
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
+import yaml
 from pyiceberg.partitioning import PartitionField, PartitionSpec
 from pyiceberg.schema import Schema
 from pyiceberg.transforms import DayTransform
@@ -17,6 +24,96 @@ from pyiceberg.types import (
     StringType,
     TimestamptzType,
 )
+
+# YAML type string → pyiceberg type constructor
+_TYPE_MAP: dict[str, Any] = {
+    "string": StringType,
+    "double": DoubleType,
+    "date": DateType,
+    "timestamptz": TimestamptzType,
+}
+
+# Partition transform string → pyiceberg transform class
+_TRANSFORM_MAP: dict[str, Any] = {
+    "day": DayTransform,
+}
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_SCHEMAS_DIR = _PROJECT_ROOT / "config" / "schemas"
+
+
+def schema_from_config(config: dict[str, Any]) -> tuple[Schema, PartitionSpec]:
+    """Build pyiceberg Schema + PartitionSpec from a YAML config dict.
+
+    Config format (see ``config/schemas/`` for examples)::
+
+        source: mlperf_benchmarks
+        columns:
+          - name: round_id
+            type: string
+          - name: tokens_per_sec
+            type: double
+        partition:
+          field: _ingestion_timestamp
+          transform: day
+
+    Returns ``(Schema, PartitionSpec)``.  If no ``partition`` key is present
+    the partition spec is empty.
+    """
+    fields = []
+    for idx, col in enumerate(config["columns"], start=1):
+        type_name = col["type"]
+        pyiceberg_type = _TYPE_MAP.get(type_name)
+        if pyiceberg_type is None:
+            raise ValueError(
+                f"Unknown type '{type_name}' for column '{col['name']}' "
+                f"in source '{config.get('source', '?')}'. Known types: {list(_TYPE_MAP)}"
+            )
+        fields.append(NestedField(idx, col["name"], pyiceberg_type(), required=False))
+
+    schema = Schema(*fields)
+
+    partition_spec = PartitionSpec()
+    partition_cfg = config.get("partition")
+    if partition_cfg:
+        field_name = partition_cfg["field"]
+        transform_name = partition_cfg["transform"]
+        transform_cls = _TRANSFORM_MAP.get(transform_name)
+        if transform_cls is None:
+            raise ValueError(
+                f"Unknown partition transform '{transform_name}'. "
+                f"Known transforms: {list(_TRANSFORM_MAP)}"
+            )
+        source_id = None
+        for field in fields:
+            if field.name == field_name:
+                source_id = field.field_id
+                break
+        if source_id is None:
+            raise ValueError(
+                f"Partition field '{field_name}' not found in columns "
+                f"for source '{config.get('source', '?')}'"
+            )
+        partition_spec = PartitionSpec(
+            PartitionField(
+                source_id=source_id, field_id=1000,
+                transform=transform_cls(), name="ingestion_day",
+            ),
+        )
+
+    return schema, partition_spec
+
+
+def load_schema_config(source_name: str) -> dict[str, Any]:
+    """Load a YAML schema config file for *source_name*.
+
+    Looks for ``config/schemas/{source_name}.yaml``.
+    """
+    path = _SCHEMAS_DIR / f"{source_name}.yaml"
+    if not path.exists():
+        raise FileNotFoundError(f"Schema config not found: {path}")
+    with open(path) as f:
+        return yaml.safe_load(f)
 
 # ── Bronze ───────────────────────────────────────────────────────────────────
 # All Bronze tables: append-only, partitioned on _ingestion_timestamp by day.

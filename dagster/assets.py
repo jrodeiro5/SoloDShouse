@@ -1,4 +1,9 @@
-"""Dagster software-defined assets for SoloDShouse AI energy cost domain."""
+"""Dagster software-defined assets — generic factory (SDS-043).
+
+All asset functions are generated at module-import time from the collector
+registry.  Adding a new data source = 1 collector file + 1 YAML schema.
+No manual Dagster edits needed.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +13,8 @@ from typing import Any
 
 import pandas as pd
 import structlog
+from resources import IcebergCatalogResource
+
 from dagster import (
     AssetCheckResult,
     AssetKey,
@@ -18,14 +25,16 @@ from dagster import (
     asset_check,
     sensor,
 )
-from resources import IcebergCatalogResource
-
 from ingestion import iceberg_io
-from ingestion.collectors.cloud_pricing_collector import CloudPricingCollector
-from ingestion.collectors.mlperf_collector import MLPerfCollector
+from ingestion.collectors.registry import get_collector, list_sources
 from transformations import mlperf_bronze_to_silver, pricing_bronze_to_silver
 
 logger = structlog.get_logger()
+
+_SILVER_TRANSFORMS: dict[str, Any] = {
+    "mlperf_benchmarks": mlperf_bronze_to_silver,
+    "cloud_gpu_pricing": pricing_bronze_to_silver,
+}
 
 
 def _emit_metric(step: str, started_at: float) -> None:
@@ -41,157 +50,163 @@ def _row_count(result: dict[str, Any]) -> int:
         return 0
 
 
-# ── Bronze ────────────────────────────────────────────────────────────────────
+# ── Generic Bronze asset factory ─────────────────────────────────────────────
 
 
-@asset(group_name="bronze", retry_policy=RetryPolicy(max_retries=3, delay=10))
-def mlperf_bronze(
-    context,
-    iceberg_catalog: IcebergCatalogResource,
-) -> dict[str, Any]:
-    """Ingest MLCommons MLPerf inference benchmark results → Bronze."""
-    started = time.perf_counter()
-    result = MLPerfCollector(iceberg_catalog.get_catalog()).collect()
-    context.add_output_metadata(
-        {
-            "round_id": result.get("round_id", ""),
-            "valid": result.get("valid", 0),
-            "rejected": result.get("rejected", 0),
-        }
+def _make_bronze_asset(source_name: str):
+    collector_cls = get_collector(source_name)
+    asset_name = f"{source_name}_bronze"
+
+    @asset(
+        name=asset_name,
+        group_name="bronze",
+        retry_policy=RetryPolicy(max_retries=3, delay=10),
+        description=f"Ingest {source_name} -> Bronze.",
     )
-    _emit_metric("mlperf_bronze", started)
-    return result
-
-
-@asset(group_name="bronze", retry_policy=RetryPolicy(max_retries=3, delay=10))
-def cloud_pricing_bronze(
-    context,
-    iceberg_catalog: IcebergCatalogResource,
-) -> dict[str, Any]:
-    """Ingest Azure GPU pricing + FRED FX rates → Bronze (two tables)."""
-    started = time.perf_counter()
-    result = CloudPricingCollector(iceberg_catalog.get_catalog()).collect()
-    context.add_output_metadata(
-        {
-            "azure_valid": result.get("azure_valid", 0),
-            "azure_rejected": result.get("azure_rejected", 0),
-            "fx_valid": result.get("fx_valid", 0),
-            "fx_skipped": str(result.get("fx_skipped", False)),
-        }
-    )
-    _emit_metric("cloud_pricing_bronze", started)
-    return result
-
-
-# NOTE: carbon_intensity_bronze — blocked on ELECTRICITY_MAPS_API_KEY (~June 2026)
-
-
-# ── Silver ────────────────────────────────────────────────────────────────────
-
-
-@asset(group_name="silver")
-def mlperf_silver(
-    context,
-    iceberg_catalog: IcebergCatalogResource,
-    mlperf_bronze: dict[str, Any],
-) -> str:
-    """Transform MLPerf Bronze → Silver efficiency table."""
-    _ = mlperf_bronze
-    started = time.perf_counter()
-    result = mlperf_bronze_to_silver.run(iceberg_catalog.get_catalog())
-    context.add_output_metadata(
-        {"table": result["table"], "row_count": _row_count(result)}
-    )
-    _emit_metric("mlperf_silver", started)
-    return str(result["table"])
-
-
-@asset(group_name="silver")
-def cloud_pricing_silver(
-    context,
-    iceberg_catalog: IcebergCatalogResource,
-    cloud_pricing_bronze: dict[str, Any],
-) -> str:
-    """Transform cloud GPU pricing Bronze → Silver (USD→EUR, dedup, accelerator map)."""
-    _ = cloud_pricing_bronze
-    started = time.perf_counter()
-    result = pricing_bronze_to_silver.run(iceberg_catalog.get_catalog())
-    context.add_output_metadata(
-        {"table": result["table"], "row_count": _row_count(result)}
-    )
-    _emit_metric("cloud_pricing_silver", started)
-    return str(result["table"])
-
-
-# NOTE: carbon_intensity_silver — blocked on carbon_intensity_bronze
-# NOTE: ai_inference_gold — blocked on Phase H (dbt Silver→Gold, needs real data)
-
-
-# ── Sensor ────────────────────────────────────────────────────────────────────
-
-
-@sensor(job_name="full_pipeline_job", minimum_interval_seconds=3600 * 24)
-def mlperf_freshness_sensor(
-    iceberg_catalog: IcebergCatalogResource,
-):
-    """Trigger pipeline if MLPerf Bronze missing or older than 30 days."""
-    from pyiceberg.exceptions import NoSuchTableError
-
-    catalog = iceberg_catalog.get_catalog()
-    latest: date | None = None
-
-    try:
-        df = iceberg_io.scan_table(catalog, "bronze", "mlperf_benchmarks")
-        if not df.empty:
-            latest = pd.to_datetime(df["_ingestion_timestamp"], utc=True).max().date()
-    except NoSuchTableError:
-        pass
-
-    if latest is None:
-        return RunRequest(
-            run_key=f"mlperf-init-{datetime.now(timezone.utc).date().isoformat()}",
-            asset_selection=[AssetKey("mlperf_bronze")],
+    def _impl(
+        context,
+        iceberg_catalog: IcebergCatalogResource,
+    ) -> dict[str, Any]:
+        started = time.perf_counter()
+        result = collector_cls(iceberg_catalog.get_catalog()).collect()
+        context.add_output_metadata(
+            {"valid": result.get("valid", 0), "rejected": result.get("rejected", 0)}
         )
+        _emit_metric(f"{source_name}_bronze", started)
+        return result
 
-    lag_days = (datetime.now(timezone.utc).date() - latest).days
-    if lag_days >= 30:
-        return RunRequest(
-            run_key=f"mlperf-stale-{latest.isoformat()}",
-            asset_selection=[AssetKey("mlperf_bronze")],
+    return _impl
+
+
+def make_bronze_assets() -> list:
+    return [_make_bronze_asset(name) for name in list_sources()]
+
+
+# ── Generic Silver asset factory ─────────────────────────────────────────────
+
+
+def _make_silver_asset(source_name: str):
+    transform = _SILVER_TRANSFORMS.get(source_name)
+    if transform is None:
+        return None
+
+    asset_name = f"{source_name}_silver"
+    bronze_dep = f"{source_name}_bronze"
+
+    @asset(
+        name=asset_name,
+        group_name="silver",
+        description=f"Transform {source_name} Bronze -> Silver.",
+    )
+    def _impl(
+        context,
+        iceberg_catalog: IcebergCatalogResource,
+        **kwargs: dict[str, Any],
+    ) -> str:
+        _ = kwargs.get(bronze_dep)
+        started = time.perf_counter()
+        result = transform.run(iceberg_catalog.get_catalog())
+        context.add_output_metadata(
+            {"table": result["table"], "row_count": _row_count(result)}
         )
-    return SkipReason(f"MLPerf data fresh: latest {latest.isoformat()} ({lag_days}d ago)")
+        _emit_metric(f"{source_name}_silver", started)
+        return str(result["table"])
+
+    return _impl
 
 
-# ── Asset checks ──────────────────────────────────────────────────────────────
+def make_silver_assets() -> list:
+    assets: list = []
+    for name in list_sources():
+        fn = _make_silver_asset(name)
+        if fn is not None:
+            assets.append(fn)
+    return assets
 
 
-@asset_check(asset=mlperf_silver, description="mlperf_efficiency must have at least 1 row")
-def mlperf_silver_min_rows_check(
-    iceberg_catalog: IcebergCatalogResource,
-    mlperf_silver: str,
-) -> AssetCheckResult:
-    _ = mlperf_silver
-    df = iceberg_io.scan_table(iceberg_catalog.get_catalog(), "silver", "mlperf_efficiency")
-    row_count = len(df)
-    passed = row_count >= 1
-    return AssetCheckResult(
-        passed=passed,
-        description=f"mlperf_efficiency has {row_count} rows",
-        metadata={"row_count": row_count},
-    )
+# ── Generic Freshness Sensor ─────────────────────────────────────────────────
 
 
-@asset_check(asset=cloud_pricing_silver, description="cloud_gpu_pricing must have at least 1 row")
-def cloud_pricing_silver_min_rows_check(
-    iceberg_catalog: IcebergCatalogResource,
-    cloud_pricing_silver: str,
-) -> AssetCheckResult:
-    _ = cloud_pricing_silver
-    df = iceberg_io.scan_table(iceberg_catalog.get_catalog(), "silver", "cloud_gpu_pricing")
-    row_count = len(df)
-    passed = row_count >= 1
-    return AssetCheckResult(
-        passed=passed,
-        description=f"cloud_gpu_pricing has {row_count} rows",
-        metadata={"row_count": row_count},
-    )
+def _make_freshness_sensor():
+    @sensor(job_name="full_pipeline_job", minimum_interval_seconds=3600 * 24)
+    def bronze_freshness_sensor(
+        iceberg_catalog: IcebergCatalogResource,
+    ):
+        from pyiceberg.exceptions import NoSuchTableError
+
+        catalog = iceberg_catalog.get_catalog()
+        stale_sources: list[str] = []
+
+        for source_name in list_sources():
+            latest: date | None = None
+            try:
+                df = iceberg_io.scan_table(catalog, "bronze", source_name)
+                if not df.empty and "_ingestion_timestamp" in df.columns:
+                    latest = pd.to_datetime(df["_ingestion_timestamp"], utc=True).max().date()
+            except NoSuchTableError:
+                pass
+
+            if latest is None:
+                stale_sources.append(source_name)
+                continue
+
+            lag_days = (datetime.now(timezone.utc).date() - latest).days
+            if lag_days >= 30:
+                stale_sources.append(source_name)
+
+        if stale_sources:
+            return RunRequest(
+                run_key=f"freshness-{datetime.now(timezone.utc).date().isoformat()}",
+                asset_selection=[AssetKey(f"{s}_bronze") for s in stale_sources],
+            )
+        return SkipReason("All bronze sources have fresh data")
+
+    return bronze_freshness_sensor
+
+
+# ── Generic Silver Asset Checks ──────────────────────────────────────────────
+
+
+def make_silver_checks() -> list:
+    checks: list = []
+
+    for source_name in _SILVER_TRANSFORMS:
+        silver_asset_name = f"{source_name}_silver"
+
+        def _make_check(src: str, asset_n: str):
+            @asset_check(
+                asset=asset_n,
+                description=f"{src} Silver has at least 1 row",
+            )
+            def _check(
+                iceberg_catalog: IcebergCatalogResource,
+                **kwargs: Any,
+            ) -> AssetCheckResult:
+                _ = kwargs
+                df = iceberg_io.scan_table(iceberg_catalog.get_catalog(), "silver", src)
+                row_count = len(df)
+                passed = row_count >= 1
+                return AssetCheckResult(
+                    passed=passed,
+                    description=f"{src} Silver has {row_count} rows",
+                    metadata={"row_count": row_count},
+                )
+
+            return _check
+
+        checks.append(_make_check(source_name, silver_asset_name))
+
+    return checks
+
+
+# ── Module-level generation ──────────────────────────────────────────────────
+
+_bronze_assets = make_bronze_assets()
+_silver_assets = make_silver_assets()
+_bronze_freshness_sensor = _make_freshness_sensor()
+_silver_checks = make_silver_checks()
+
+bronze_assets = _bronze_assets
+silver_assets = _silver_assets
+all_assets = [*_bronze_assets, *_silver_assets]
+mlperf_freshness_sensor = _bronze_freshness_sensor

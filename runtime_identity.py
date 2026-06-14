@@ -9,7 +9,7 @@ from typing import Mapping
 
 DEFAULT_PRODUCT_ID = "solodshouse"
 DEFAULT_DISPLAY_NAME = "SoloDShouse"
-DEFAULT_DOMAIN = "energy_ai_cost"
+DEFAULT_DOMAIN = "default"
 DEFAULT_ENVIRONMENT = "local"
 DEFAULT_RUNTIME_VERSION = "sds-v0.1.0"
 
