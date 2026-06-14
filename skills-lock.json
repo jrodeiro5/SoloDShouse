@@ -1,11 +1,57 @@
 {
   "version": 1,
   "skills": {
+    "archimate": {
+      "source": "markdown-viewer/skills",
+      "sourceType": "github",
+      "skillPath": "archimate/SKILL.md",
+      "computedHash": "c8a13f6f9419ca93fdb5713f8b72dba5ee677a4291d8cf4ee75dea6532031e5c"
+    },
+    "architecture": {
+      "source": "markdown-viewer/skills",
+      "sourceType": "github",
+      "skillPath": "architecture/SKILL.md",
+      "computedHash": "add5f37477735ade3275336c8959d5b4ae788dbcdb71582a38770b89c147c2d1"
+    },
+    "bpmn": {
+      "source": "markdown-viewer/skills",
+      "sourceType": "github",
+      "skillPath": "bpmn/SKILL.md",
+      "computedHash": "a916987175ef1a5804266fd1f64e931265ca0eec4b82f1737d7344623f1c73e8"
+    },
+    "data-analytics": {
+      "source": "markdown-viewer/skills",
+      "sourceType": "github",
+      "skillPath": "data-analytics/SKILL.md",
+      "computedHash": "effd16c1e5f8916e4d1e729c3b287f282cedc682afc7804d59c75e745ada2ba6"
+    },
     "improve-codebase-architecture": {
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/engineering/improve-codebase-architecture/SKILL.md",
       "computedHash": "ef32aea0a8fab9b365ff9e08a95f8d353e20ca21ea46ec2e73587c86dd341351"
+    },
+    "mindmap": {
+      "source": "markdown-viewer/skills",
+      "sourceType": "github",
+      "skillPath": "mindmap/SKILL.md",
+      "computedHash": "3ad155148d53060ebe878d11feae61ec496ce0fc4bd738991eb37269cc43fda8"
+    },
+    "scikit-learn": {
+      "source": "davila7/claude-code-templates",
+      "sourceType": "autoskills-registry",
+      "computedHash": "85906cd4a73ba484bd09c678de077fa1423ce1ccce59d939f9ff95ee41577341"
+    },
+    "senior-data-scientist": {
+      "source": "davila7/claude-code-templates",
+      "sourceType": "autoskills-registry",
+      "computedHash": "e221c094ccf0de522e17582aaa026e3443d12199e6460b483fda2ce2c1548ce7"
+    },
+    "uml": {
+      "source": "markdown-viewer/skills",
+      "sourceType": "github",
+      "skillPath": "uml/SKILL.md",
+      "computedHash": "9f11e9e19eaad8d56ec914450fc945f652abcf6de944135fb195d2f5eae212d7"
     }
   }
 }
