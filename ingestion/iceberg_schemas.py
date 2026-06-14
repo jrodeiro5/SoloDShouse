@@ -74,6 +74,21 @@ BRONZE_FX_RATES_PARTITION = PartitionSpec(
     PartitionField(source_id=3, field_id=1000, transform=DayTransform(), name="ingestion_day"),
 )
 
+BRONZE_ENTSO_GENERATION_SCHEMA = Schema(
+    NestedField(1, "timestamp_utc", TimestamptzType(), required=False),
+    NestedField(2, "country", StringType(), required=False),
+    NestedField(3, "psr_type", StringType(), required=False),
+    NestedField(4, "psr_type_name", StringType(), required=False),
+    NestedField(5, "quantity_mw", DoubleType(), required=False),
+    NestedField(6, "resolution", StringType(), required=False),
+    NestedField(7, "_ingestion_timestamp", TimestamptzType(), required=False),
+    NestedField(8, "_source", StringType(), required=False),
+)
+
+BRONZE_ENTSO_GENERATION_PARTITION = PartitionSpec(
+    PartitionField(source_id=7, field_id=1000, transform=DayTransform(), name="ingestion_day"),
+)
+
 # Rejected records — narrow fixed schema, original fields as JSON in `payload`.
 BRONZE_REJECTED_SCHEMA = Schema(
     NestedField(1, "source", StringType(), required=False),

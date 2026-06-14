@@ -44,3 +44,11 @@ wiki/
 # Backups
 README.bak1
 README.bak2
+# UCM guidelines — copyrighted course materials, keep local only
+docs/ucm_guidelines/
+
+# UCM scripts — copyrighted extraction tooling, keep local only
+scripts/ucm/
+
+# UCM legacy DuckDB — keep local only
+data/ucm_guidelines.duckdb
