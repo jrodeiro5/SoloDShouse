@@ -36,7 +36,7 @@ Three capability layers, zero bundled domains:
 | **ML** | Model training, experiment tracking, serving (XGBoost, LightGBM, PyTorch, MLflow, BentoML) |
 | **AI Agent** | Natural-language queries over your data (deepagents, Open WebUI, LiteLLM, MCP tools) |
 
-Runs on a Mac Studio M4 Max (64 GB) for development and a €5/month Hetzner VPS for staging. No cloud lock-in.
+Runs on a Mac Studio M4 Max (64 GB). Local-first, zero cloud — no VPS required.
 
 ---
 
@@ -212,17 +212,7 @@ make clean           # Stop + wipe all data
 DEV — Mac Studio M4 Max (64 GB, Apple Silicon)
   docker compose --profile full up
   LLM inference: llama.cpp or vLLM locally
-
-STAGING — Hetzner CPX21 (4 GB RAM, 40 GB disk, ~€5/mo)
-  docker compose --profile core --profile agent up -d
-  LLM: Groq API (free tier) or SSH tunnel to Mac
-
-CI — GitHub Actions
-  build → ghcr.io/jrodeiro5/solodshouse-*
-  test  → pytest + ruff + mypy
 ```
-
-> VPS constraint: 4 GB RAM — never run LLM inference there. Route via LiteLLM → Groq API.
 
 ---
 

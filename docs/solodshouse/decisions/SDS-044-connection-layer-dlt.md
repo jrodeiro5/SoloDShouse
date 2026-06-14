@@ -15,7 +15,7 @@ Users must connect their own data sources. Need:
 3. **Credential vault** — Encrypt API keys, connection strings
 4. **Connector plugins** — Pluggable per source type
 
-Evaluated: OpenMetadata (rejected SDS-014, kills VPS), Cube (overlaps dbt MetricFlow), Supabase (12 containers, Postgres-only), InsForge (competing platform), iii-hq (wrong layer), Nango (overkill), Infisical (future upgrade).
+Evaluated: OpenMetadata (rejected SDS-014, 2GB+), Cube (overlaps dbt MetricFlow), Supabase (12 containers, Postgres-only), InsForge (competing platform), iii-hq (wrong layer), Nango (overkill), Infisical (future upgrade).
 
 ## Decision
 
@@ -101,7 +101,7 @@ Zero manual schema writing. Zero Dagster edits.
 
 | Tool | Reason |
 |------|--------|
-| OpenMetadata | 2GB+, kills VPS, eliminated SDS-014 |
+| OpenMetadata | 2GB+, eliminated SDS-014 |
 | Supabase | 12 containers, 4GB RAM, Postgres-only |
 | Cube | Overlaps dbt MetricFlow |
 | Nango | OAuth hub, overkill for connection layer |

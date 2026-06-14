@@ -76,7 +76,6 @@ Strong success criteria → loop independently. Weak ("make it work") → consta
 | Environment | Machine | RAM | Cost |
 |-------------|---------|:---:|:----:|
 | DEV | Mac Studio M4 Max | 64 GB | owned |
-| STAGING | Hetzner CX23 (2 vCPU / 4 GB / 40 GB) | 4 GB | ~€4.83/mo |
 
 **Docker runtime (macOS):** OrbStack — replaces Docker Desktop. Faster on Apple Silicon, lower RAM overhead, native `docker` and `docker compose` CLI. Install: `brew install orbstack`.
 
