@@ -7,6 +7,7 @@ No manual Dagster edits needed.
 
 from __future__ import annotations
 
+import os
 import time
 from datetime import date, datetime, timezone
 from typing import Any
@@ -137,7 +138,7 @@ def dbt_run_asset(context) -> dict[str, Any]:
     result = subprocess.run(
         ["dbt", "run", "--project-dir", str(dbt_dir), "--profiles-dir", str(dbt_dir)],
         capture_output=True, text=True, timeout=120,
-        env={"DBT_DUCKDB_PATH": str(target), "PATH": __import__("os").environ["PATH"]},
+        env={"DBT_DUCKDB_PATH": str(target), "PATH": os.environ["PATH"]},
     )
     if result.returncode != 0:
         context.log.error("dbt_run_failed", stderr=result.stderr[-500:])
@@ -146,7 +147,7 @@ def dbt_run_asset(context) -> dict[str, Any]:
     test_result = subprocess.run(
         ["dbt", "test", "--project-dir", str(dbt_dir), "--profiles-dir", str(dbt_dir)],
         capture_output=True, text=True, timeout=120,
-        env={"DBT_DUCKDB_PATH": str(target), "PATH": __import__("os").environ["PATH"]},
+        env={"DBT_DUCKDB_PATH": str(target), "PATH": os.environ["PATH"]},
     )
     if test_result.returncode != 0:
         context.log.warning("dbt_tests_warn", stdout=test_result.stdout[-500:])

@@ -178,14 +178,18 @@ def _fetch_postgres(config: Any) -> list[dict[str, Any]]:
         user=config.user,
         password=config.password,
     )
+    from psycopg2 import sql
+
     table: str = getattr(config, "table", "") or ""
     schema: str = getattr(config, "schema", "public") or "public"
     cur = conn.cursor()
     if table:
-        qualified = f'"{schema}"."{table}"'
+        query = sql.SQL("SELECT * FROM {}.{} LIMIT 1000").format(
+            sql.Identifier(schema), sql.Identifier(table)
+        )
     else:
-        qualified = "information_schema.tables"
-    cur.execute(f"SELECT * FROM {qualified} LIMIT 1000")
+        query = sql.SQL("SELECT * FROM information_schema.tables LIMIT 1000")
+    cur.execute(query)
     cols = [desc[0] for desc in cur.description]
     rows = [dict(zip(cols, row)) for row in cur.fetchall()]
     conn.close()

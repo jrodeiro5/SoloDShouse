@@ -1,0 +1,16 @@
+.git
+.github
+.venv
+.omo
+docker/data/
+node_modules/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.duckdb
+tests/
+docs/
