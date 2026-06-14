@@ -18,7 +18,13 @@ from typing import Any
 import structlog
 import yaml
 
-from connections.manager import ConnectionConfig
+from connections.manager import (
+    ConnectionConfig,
+    FilesystemConfig,
+    PostgresConfig,
+    RestConfig,
+    S3Config,
+)
 
 logger = structlog.get_logger()
 
@@ -71,12 +77,16 @@ class SchemaDiscovery:
         conn_type = connection.type
 
         if conn_type == "postgres":
+            assert isinstance(config, PostgresConfig)
             columns = self._probe_postgres(source_name, config)
         elif conn_type == "s3":
+            assert isinstance(config, S3Config)
             columns = self._probe_s3(source_name, config)
         elif conn_type == "rest":
+            assert isinstance(config, RestConfig)
             columns = self._probe_rest(source_name, config)
         elif conn_type == "filesystem":
+            assert isinstance(config, FilesystemConfig)
             columns = self._probe_filesystem(source_name, config)
         else:
             raise ValueError(f"Unsupported connection type: {conn_type}")
@@ -87,8 +97,8 @@ class SchemaDiscovery:
             "columns": columns,
         }
 
-    def _probe_postgres(self, source: str, config: dict[str, str]) -> list[dict[str, Any]]:
-        table = config.get("table", source)
+    def _probe_postgres(self, source: str, config: PostgresConfig) -> list[dict[str, Any]]:
+        table = config.table or source
         try:
             import dlt
 
@@ -98,8 +108,8 @@ class SchemaDiscovery:
                 dataset_name="bronze",
             )
             src = dlt.sources.sql_database(
-                f"postgresql://{config.get('user')}:****@{config.get('host')}:{config.get('port', 5432)}/{config.get('database')}",
-                schema=config.get("schema", "public"),
+                f"postgresql://{config.user}:****@{config.host}:{config.port}/{config.database}",
+                schema=config.schema,
                 table_names=[table],
             )
             pipeline.run(src)
@@ -108,9 +118,9 @@ class SchemaDiscovery:
             logger.warning("dlt_not_installed", hint="pip install dlt")
             return _fallback_columns()
 
-    def _probe_s3(self, source: str, config: dict[str, str]) -> list[dict[str, Any]]:
-        prefix = config.get("prefix", source)
-        bucket = config["bucket"]
+    def _probe_s3(self, source: str, config: S3Config) -> list[dict[str, Any]]:
+        prefix = config.prefix or source
+        bucket = config.bucket
         try:
             import dlt
 
@@ -121,7 +131,7 @@ class SchemaDiscovery:
             )
             src = dlt.sources.filesystem(
                 bucket_url=f"s3://{bucket}/{prefix}",
-                file_glob=config.get("file_glob", "*.parquet"),
+                file_glob=config.file_glob,
             )
             pipeline.run(src)
             return _columns_from_dlt_schema(pipeline.default_schema, source)
@@ -129,9 +139,9 @@ class SchemaDiscovery:
             logger.warning("dlt_not_installed", hint="pip install dlt")
             return _fallback_columns()
 
-    def _probe_rest(self, source: str, config: dict[str, str]) -> list[dict[str, Any]]:
-        url = config["base_url"]
-        endpoint = config.get("endpoint", "")
+    def _probe_rest(self, source: str, config: RestConfig) -> list[dict[str, Any]]:
+        url = config.base_url
+        endpoint = config.endpoint or ""
         full_url = f"{url.rstrip('/')}/{endpoint.lstrip('/')}" if endpoint else url
         try:
             import dlt  # noqa: F811
@@ -154,8 +164,8 @@ class SchemaDiscovery:
             logger.warning("dlt_not_installed", hint="pip install dlt[duckdb]")
             return _fallback_columns()
 
-    def _probe_filesystem(self, source: str, config: dict[str, str]) -> list[dict[str, Any]]:
-        path = config.get("path", f"./data/{source}")
+    def _probe_filesystem(self, source: str, config: FilesystemConfig) -> list[dict[str, Any]]:
+        path = config.path or f"./data/{source}"
         try:
             import dlt
 
@@ -166,7 +176,7 @@ class SchemaDiscovery:
             )
             src = dlt.sources.filesystem(
                 bucket_url=path,
-                file_glob=config.get("file_glob", "*.parquet"),
+                file_glob=config.file_glob,
             )
             pipeline.run(src)
             return _columns_from_dlt_schema(pipeline.default_schema, source)

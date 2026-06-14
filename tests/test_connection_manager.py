@@ -66,9 +66,28 @@ class TestConnectionManager:
         assert conn.name == "prod_pg"
         assert conn.type == "postgres"
         assert conn.roles == ["reader", "admin"]
-        assert conn.config["host"] == "db.example.com"
-        assert conn.config["user"] == "reader"
-        assert conn.config["password"] == "s3cr3t"  # decrypted
+        assert conn.config["host"] == "db.example.com"  # type: ignore[index, union-attr]
+        assert conn.config["user"] == "reader"  # type: ignore[index, union-attr]
+        assert conn.config["password"] == "s3cr3t"  # type: ignore[index, union-attr]
+
+        from connections.manager import PostgresConfig, S3Config, RestConfig
+        assert isinstance(conn.config, PostgresConfig)
+        assert conn.config.host == "db.example.com"
+        assert conn.config.port == 5432
+        assert conn.config.user == "reader"
+        assert conn.config.password == "s3cr3t"
+
+        lake_conn = mgr.get_connection("data_lake")
+        assert isinstance(lake_conn.config, S3Config)
+        assert lake_conn.config.bucket == "raw-data"
+        assert lake_conn.config.endpoint == "http://minio:9000"
+        assert lake_conn.config.access_key == "minioadmin"
+        assert lake_conn.config.secret_key == "minioadmin123"
+
+        weather_conn = mgr.get_connection("weather_api")
+        assert isinstance(weather_conn.config, RestConfig)
+        assert weather_conn.config.base_url == "https://api.weather.com"
+        assert weather_conn.config.endpoint == "v1/forecast"
 
     def test_get_connection_missing_raises_keyerror(self, config_file: Path, vault: FernetVault) -> None:
         mgr = ConnectionManager(config_path=config_file, vault=vault)
@@ -101,7 +120,7 @@ class TestConnectionManager:
         tmp = Path(tempfile.mktemp(suffix=".yaml"))
         tmp.write_text(yaml)
         mgr = ConnectionManager(config_path=tmp, vault=vault)
-        assert mgr.get_connection("env_test").config["host"] == "prod-db.example.com"
+        assert mgr.get_connection("env_test").config["host"] == "prod-db.example.com"  # type: ignore[index, union-attr]
 
     def test_missing_env_var_raises_value_error(self, vault: FernetVault, monkeypatch) -> None:
         monkeypatch.delenv("MISSING_VAR", raising=False)

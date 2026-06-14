@@ -15,12 +15,19 @@ from __future__ import annotations
 
 import os
 import re
-from dataclasses import dataclass, field
+import warnings
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
+
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message='Field name "schema" in "PostgresConfig" shadows an attribute in parent "BaseConfigModel"',
+)
 
 import structlog
 import yaml
+from pydantic import BaseModel, Field, model_validator
 
 from connections.vault import FernetVault
 
@@ -30,14 +37,91 @@ _VALID_TYPES = frozenset({"postgres", "s3", "rest", "filesystem"})
 _ENV_VAR_RE = re.compile(r"\$\{(\w+)\}")
 
 
-@dataclass(frozen=True)
-class ConnectionConfig:
+class BaseConfigModel(BaseModel):
+    model_config = {
+        "extra": "allow",
+    }
+
+    def __getitem__(self, item: str) -> Any:
+        try:
+            return getattr(self, item)
+        except AttributeError:
+            raise KeyError(item)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return getattr(self, key, default)
+
+    def __contains__(self, item: str) -> bool:
+        return hasattr(self, item)
+
+    def keys(self) -> Any:
+        return self.model_dump().keys()
+
+    def values(self) -> Any:
+        return self.model_dump().values()
+
+    def items(self) -> Any:
+        return self.model_dump().items()
+
+
+class PostgresConfig(BaseConfigModel):
+    host: str
+    port: int = 5432
+    database: str
+    user: str
+    password: str
+    schema: str = "public"  # type: ignore[assignment]
+    table: str | None = None
+
+
+class S3Config(BaseConfigModel):
+    endpoint: str | None = None
+    bucket: str
+    access_key: str | None = None
+    secret_key: str | None = None
+    prefix: str | None = None
+    file_glob: str = "*.parquet"
+
+
+class RestConfig(BaseConfigModel):
+    base_url: str
+    endpoint: str | None = None
+    method: str = "GET"
+    headers: dict[str, str] = Field(default_factory=dict)
+
+
+class FilesystemConfig(BaseConfigModel):
+    path: str | None = None
+    file_glob: str = "*.parquet"
+
+
+TypedConfig = Union[PostgresConfig, S3Config, RestConfig, FilesystemConfig]
+
+
+class ConnectionConfig(BaseModel):
     """Validated connection descriptor with decrypted credentials."""
 
     name: str
     type: str  # postgres | s3 | rest | filesystem
-    roles: list[str] = field(default_factory=lambda: ["reader"])
-    config: dict[str, str] = field(default_factory=dict)
+    roles: list[str] = Field(default_factory=lambda: ["reader"])
+    config: TypedConfig | dict[str, Any] | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def parse_config(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            config_val = data.get("config")
+            conn_type = data.get("type")
+            if isinstance(config_val, dict) and conn_type:
+                if conn_type == "postgres":
+                    data["config"] = PostgresConfig(**config_val)
+                elif conn_type == "s3":
+                    data["config"] = S3Config(**config_val)
+                elif conn_type == "rest":
+                    data["config"] = RestConfig(**config_val)
+                elif conn_type == "filesystem":
+                    data["config"] = FilesystemConfig(**config_val)
+        return data
 
 
 class ConnectionManager:
@@ -132,7 +216,19 @@ class ConnectionManager:
         # Resolve ${ENV_VAR} and vault:// placeholders
         config = self._resolve_placeholders(name, config)
 
-        return ConnectionConfig(name=name, type=conn_type, roles=roles, config=config)
+        typed_config: TypedConfig
+        if conn_type == "postgres":
+            typed_config = PostgresConfig(**config)  # type: ignore[arg-type]
+        elif conn_type == "s3":
+            typed_config = S3Config(**config)  # type: ignore[arg-type]
+        elif conn_type == "rest":
+            typed_config = RestConfig(**config)  # type: ignore[arg-type]
+        elif conn_type == "filesystem":
+            typed_config = FilesystemConfig(**config)  # type: ignore[arg-type]
+        else:
+            raise ValueError(f"Unknown type: {conn_type}")
+
+        return ConnectionConfig(name=name, type=conn_type, roles=roles, config=typed_config)
 
     def _resolve_placeholders(self, name: str, config: dict[str, str]) -> dict[str, str]:
         resolved: dict[str, str] = {}
