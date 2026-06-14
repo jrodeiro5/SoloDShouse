@@ -327,3 +327,181 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+
+  # ── ML Layer ────────────────────────────────────────────────────────────
+
+  bentoml:
+    image: bentoml/bentoml:latest
+    container_name: sds-bentoml
+    profiles: ["ml", "full", "llm-12b", "llm-70b"]
+    ports:
+      - "${BENTOML_PORT:-3002}:3000"
+    volumes:
+      - ./data/bentoml:/home/bentoml/bento
+    environment:
+      BENTOML_HOME: /home/bentoml/bento
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── NoSQL ───────────────────────────────────────────────────────────────
+
+  mongodb:
+    image: mongo:7
+    container_name: sds-mongodb
+    profiles: ["full", "llm-12b", "llm-70b"]
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - ./data/mongodb:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-solodshouse}
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── Observability ───────────────────────────────────────────────────────
+
+  langfuse:
+    image: ghcr.io/langfuse/langfuse:latest
+    container_name: sds-langfuse
+    profiles: ["observability", "full", "llm-12b", "llm-70b"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${LANGFUSE_PORT:-3003}:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/langfuse
+      NEXTAUTH_SECRET: ${LANGFUSE_SECRET:-langfuse-secret-change-me}
+      NEXTAUTH_URL: http://localhost:${LANGFUSE_PORT:-3003}
+      SALT: ${LANGFUSE_SALT:-langfuse-salt-change-me}
+      TELEMETRY_ENABLED: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/public/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sds-prometheus
+    profiles: ["observability", "full", "llm-12b", "llm-70b"]
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ../config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./data/prometheus:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: sds-alertmanager
+    profiles: ["observability", "full", "llm-12b", "llm-70b"]
+    ports:
+      - "${ALERTMANAGER_PORT:-9093}:9093"
+    volumes:
+      - ../config/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── Agent Infrastructure ────────────────────────────────────────────────
+
+  mem0:
+    image: mem0/mem0:latest
+    container_name: sds-mem0
+    profiles: ["agent", "full", "llm-12b", "llm-70b"]
+    ports:
+      - "${MEM0_PORT:-8050}:8050"
+    volumes:
+      - ./data/mem0:/app/data
+    environment:
+      MEM0_TELEMETRY: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8050/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  kotaemon:
+    image: ghcr.io/cinnamon/kotaemon:main
+    container_name: sds-kotaemon
+    profiles: ["agent", "full", "llm-12b", "llm-70b"]
+    ports:
+      - "${KOTAEMON_PORT:-3004}:7860"
+    volumes:
+      - ./data/kotaemon:/app/ktem_app_data
+    environment:
+      OPENAI_API_BASE: http://litellm:4000/v1
+      OPENAI_API_KEY: ${LITELLM_MASTER_KEY:-sk-litellm-master-key-change-me}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ── BI ──────────────────────────────────────────────────────────────────
+
+  evidence:
+    image: evidence-dev/evidence:latest
+    container_name: sds-evidence
+    profiles: ["bi", "full", "llm-12b", "llm-70b"]
+    ports:
+      - "${EVIDENCE_PORT:-3100}:3000"
+    volumes:
+      - ../evidence:/app
+    environment:
+      DUCKDB_PATH: /app/data/gold.duckdb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ── On-Demand ───────────────────────────────────────────────────────────
+
+  spark:
+    image: bitnami/spark:latest
+    container_name: sds-spark
+    profiles: ["spark"]
+    ports:
+      - "${SPARK_UI_PORT:-4040}:4040"
+      - "${SPARK_MASTER_PORT:-7077}:7077"
+    volumes:
+      - ./data/spark:/opt/spark/work
+    environment:
+      SPARK_MODE: master
+      SPARK_MASTER_HOST: spark
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4040"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
