@@ -20,6 +20,14 @@ LITELLM_BASE_URL = os.environ.get("LITELLM_BASE_URL", "http://litellm:4000")
 LITELLM_API_KEY = os.environ.get("LITELLM_API_KEY", "")
 
 
+def _check_auth(request: Request) -> None:
+    auth = request.headers.get("Authorization", "")
+    expected = os.environ.get("LITELLM_API_KEY", "")
+    if not auth or (expected and auth != f"Bearer {expected}"):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -27,6 +35,7 @@ async def health() -> dict[str, str]:
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request) -> JSONResponse:
+    _check_auth(request)
     body = await request.json()
     return JSONResponse(
         content={

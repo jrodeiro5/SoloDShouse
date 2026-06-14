@@ -149,6 +149,7 @@ class SchemaDiscovery:
         url = config.base_url
         endpoint = config.endpoint or ""
         full_url = f"{url.rstrip('/')}/{endpoint.lstrip('/')}" if endpoint else url
+        _validate_rest_url(full_url)
         try:
             import dlt  # noqa: F811
             import requests
@@ -282,3 +283,23 @@ def _extract_first_record(data: dict[str, Any] | list[Any]) -> dict[str, Any]:
 
 def _fallback_columns() -> list[dict[str, Any]]:
     return [{"name": "_raw", "type": "string", "nullable": True}]
+
+
+def _validate_rest_url(url: str) -> None:
+    """Block requests to internal/localhost addresses (SSRF prevention)."""
+    import ipaddress
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    hostname = parsed.hostname or ""
+    if not hostname:
+        raise ValueError(f"Invalid REST URL: no hostname in '{url}'")
+    try:
+        addr = ipaddress.ip_address(hostname)
+        if addr.is_private or addr.is_loopback or addr.is_link_local:
+            raise ValueError(
+                f"REST discovery blocked for internal address: {hostname}"
+            )
+    except ValueError as exc:
+        if "does not appear to be an IPv4 or IPv6 address" not in str(exc):
+            raise
