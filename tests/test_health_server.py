@@ -48,7 +48,8 @@ def test_status_payload_contains_portal_sections(monkeypatch) -> None:
         "detail": "Machine-readable portal status",
     } in payload["links"]
     assert any(link["url"] == "http://object-store.local:9001" for link in payload["links"])
-    assert any(doc["url"] == "/docs/make-demo-guide.md" for doc in payload["docs"])
+    assert isinstance(payload["docs"], list)
+    assert len(payload["docs"]) == 0
 
 
 def test_demo_readiness_reports_blocking_services() -> None:

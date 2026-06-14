@@ -13,11 +13,11 @@ from storage_config import (
 def test_storage_config_defaults_to_v25_reference_values() -> None:
     config = get_storage_config({})
 
-    assert config.data_bucket == "sololakehouse"
-    assert config.audit_bucket == "sololakehouse-audit"
-    assert config.mlflow_artifact_bucket == "mlflow-artifacts"
-    assert config.mlflow_artifact_root == "s3://mlflow-artifacts/"
-    assert config.warehouse_uri == "s3a://sololakehouse/warehouse/"
+    assert config.data_bucket == "solodshouse-data"
+    assert config.audit_bucket == "solodshouse-audit"
+    assert config.mlflow_artifact_bucket == "solodshouse-mlflow"
+    assert config.mlflow_artifact_root == "s3://solodshouse-mlflow/"
+    assert config.warehouse_uri == "s3a://solodshouse-data/warehouse/"
 
 
 def test_data_bucket_takes_precedence_over_legacy_bucket_name() -> None:
