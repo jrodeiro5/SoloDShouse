@@ -27,14 +27,10 @@ from dagster import (
 )
 from ingestion import iceberg_io
 from ingestion.collectors.registry import get_collector, list_sources
-from transformations import mlperf_bronze_to_silver, pricing_bronze_to_silver
 
 logger = structlog.get_logger()
 
-_SILVER_TRANSFORMS: dict[str, Any] = {
-    "mlperf_benchmarks": mlperf_bronze_to_silver,
-    "cloud_gpu_pricing": pricing_bronze_to_silver,
-}
+_SILVER_TRANSFORMS: dict[str, Any] = {}
 
 
 def _emit_metric(step: str, started_at: float) -> None:
