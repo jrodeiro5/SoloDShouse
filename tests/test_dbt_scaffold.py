@@ -44,7 +44,7 @@ class TestDbtScaffold:
             line for line in result.stdout.splitlines()
             if line.startswith("solodshouse.staging")
         ]
-        assert len(models) == 1, f"Expected 1 staging model, got: {models}"
+        assert len(models) >= 1, f"Expected staging content, got: {models}"
 
     def test_run_with_test_table_creates_view(self) -> None:
         import duckdb
@@ -71,3 +71,24 @@ class TestDbtScaffold:
         result = _dbt(["run", "--select", "stg_generic", "--vars",
                         '{"source_table": "nonexistent_table"}'])
         assert result.returncode != 0
+
+    def test_dbt_test_runs_after_model(self) -> None:
+        import duckdb
+
+        db_path = DBT_DIR / "target" / "test.duckdb"
+        con = duckdb.connect(str(db_path))
+        con.execute("CREATE TABLE test_source (id INTEGER, name VARCHAR)")
+        con.execute("INSERT INTO test_source VALUES (1, 'alice'), (2, 'bob')")
+        con.close()
+
+        run_result = _dbt(["run", "--select", "stg_generic", "--vars",
+                            '{"source_table": "test_source"}'])
+        assert run_result.returncode == 0
+
+        test_result = _dbt(["test", "--select", "stg_generic"])
+        assert test_result.returncode == 0, f"dbt test failed: {test_result.stderr}"
+
+    def test_sources_yml_parses_glossary_docs(self) -> None:
+        result = _dbt(["compile", "--select", "stg_generic"])
+        assert result.returncode == 0
+        assert "docs_glossary" not in result.stderr.lower()

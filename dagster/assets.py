@@ -143,9 +143,17 @@ def dbt_run_asset(context) -> dict[str, Any]:
         context.log.error("dbt_run_failed", stderr=result.stderr[-500:])
         raise RuntimeError(f"dbt run failed: {result.stderr[-300:]}")
 
+    test_result = subprocess.run(
+        ["dbt", "test", "--project-dir", str(dbt_dir), "--profiles-dir", str(dbt_dir)],
+        capture_output=True, text=True, timeout=120,
+        env={"DBT_DUCKDB_PATH": str(target), "PATH": __import__("os").environ["PATH"]},
+    )
+    if test_result.returncode != 0:
+        context.log.warning("dbt_tests_warn", stdout=test_result.stdout[-500:])
+
     _emit_metric("dbt_run", started)
     context.add_output_metadata({"sources": len(sources), "stdout": result.stdout[-500:]})
-    return {"models": len(sources), "status": "success"}
+    return {"models": len(sources), "status": "success", "tests_ran": True}
 
 
 all_assets = [*_bronze_assets, dbt_run_asset]

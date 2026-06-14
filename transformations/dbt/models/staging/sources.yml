@@ -1,0 +1,39 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: '{{ doc("bronze_layer") }}'
+    meta:
+      domain: ingestion
+      owner: data_platform
+      pii_classification: internal
+    tables:
+      - name: dynamic_source
+        description: >
+          Auto-discovered Bronze sources from connections.yaml.
+          Real tables registered at runtime via dlt SchemaDiscovery.
+        meta:
+          pii_classification: internal
+          refresh_frequency: daily
+
+models:
+  - name: stg_generic
+    description: >
+      Generic staging model — reads any DuckDB table via
+      --vars '{"source_table": "table_name"}'.
+      Reference pattern for domain-specific staging models.
+    meta:
+      domain: staging
+      owner: data_platform
+      pii_classification: internal
+    columns:
+      - name: id
+        description: Primary identifier — type varies by source.
+        meta:
+          pii_classification: internal
+        tests:
+          - not_null
+      - name: name
+        description: Human-readable label or description field.
+        meta:
+          pii_classification: internal
