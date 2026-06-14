@@ -11,11 +11,10 @@ THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 if THIS_DIR not in sys.path:
     sys.path.insert(0, THIS_DIR)
 
-from assets import (  # noqa: E402
+from assets import (  # noqa: E402, I001
+    _bronze_freshness_sensor as bronze_freshness_sensor,
     all_assets,
     bronze_assets,
-    make_silver_checks,
-    mlperf_freshness_sensor,
 )
 from resources import IcebergCatalogResource, PipelineConfigResource  # noqa: E402
 
@@ -36,14 +35,11 @@ daily_pipeline_schedule = ScheduleDefinition(
     execution_timezone="UTC",
 )
 
-_silver_checks = make_silver_checks()
-
 defs = Definitions(
     assets=all_assets,
-    asset_checks=_silver_checks,
     jobs=[full_pipeline_job, bronze_only_job],
     schedules=[daily_pipeline_schedule],
-    sensors=[mlperf_freshness_sensor],
+    sensors=[bronze_freshness_sensor],
     resources={
         "pipeline_config": PipelineConfigResource(),
         "iceberg_catalog": IcebergCatalogResource(),

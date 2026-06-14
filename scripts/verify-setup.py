@@ -218,31 +218,8 @@ def check_dagster_credentials() -> StatusTuple:
     return ("Dagster S3 creds", "PASS", "AWS + MLflow S3 credentials present")
 
 
-def check_openmetadata() -> StatusTuple:
-    """Verify OpenMetadata API health."""
-    base = os.environ.get("OPENMETADATA_URL", "http://localhost:8585").rstrip("/")
-    try:
-        response = requests.get(f"{base}/api/v1/system/version", timeout=5)
-        if response.status_code == 200:
-            return ("OpenMetadata", "PASS", f"API OK ({base})")
-        return ("OpenMetadata", "FAIL", f"HTTP {response.status_code}")
-    except requests.Timeout:
-        return ("OpenMetadata", "TIMEOUT", "Timed out after 5s")
-    except Exception as exc:
-        return ("OpenMetadata", "FAIL", str(exc))
-
-
-def check_superset() -> StatusTuple:
-    base = os.environ.get("SUPERSET_URL", "http://localhost:8088").rstrip("/")
-    try:
-        response = requests.get(f"{base}/health", timeout=5)
-        if response.status_code == 200:
-            return ("Superset", "PASS", f"HTTP 200 ({base}/health)")
-        return ("Superset", "FAIL", f"HTTP {response.status_code}")
-    except requests.Timeout:
-        return ("Superset", "TIMEOUT", "Timed out after 5s")
-    except Exception as exc:
-        return ("Superset", "FAIL", str(exc))
+# OpenMetadata: eliminated per SDS-014
+# Superset: eliminated per SDS-022
 
 
 def check_dagster() -> StatusTuple:
@@ -281,7 +258,6 @@ def required_postgres_databases(*, include_dagster: bool = False) -> set[str]:
     required = {"hive_metastore", "mlflow"}
     if include_dagster:
         required.add("dagster_storage")
-    required.add(os.environ.get("SUPERSET_DB_NAME", "superset_metadata"))
     return required
 
 
@@ -309,8 +285,6 @@ def main() -> int:
         check_mlflow,
         check_dagster,
         check_dagster_credentials,
-        check_openmetadata,
-        check_superset,
     ]
     results = [check() for check in checks]
     print(

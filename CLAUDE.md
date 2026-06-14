@@ -407,7 +407,7 @@ git worktree list     # See active agent worktrees
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **SoloDShouse** (2618 symbols, 3367 relationships, 47 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **SoloDShouse** (2745 symbols, 3567 relationships, 53 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

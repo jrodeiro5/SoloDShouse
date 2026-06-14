@@ -12,7 +12,7 @@ import psycopg2
 from psycopg2 import sql
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-REQUIRED_DATABASES = ("hive_metastore", "mlflow", "dagster_storage", "superset_metadata")
+REQUIRED_DATABASES = ("hive_metastore", "mlflow", "dagster_storage")
 
 
 def _postgres_tcp_endpoint() -> tuple[str, int]:

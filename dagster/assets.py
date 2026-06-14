@@ -16,13 +16,11 @@ import structlog
 from resources import IcebergCatalogResource
 
 from dagster import (
-    AssetCheckResult,
     AssetKey,
     RetryPolicy,
     RunRequest,
     SkipReason,
     asset,
-    asset_check,
     sensor,
 )
 from ingestion import iceberg_io
@@ -30,20 +28,9 @@ from ingestion.collectors.registry import get_collector, list_sources
 
 logger = structlog.get_logger()
 
-_SILVER_TRANSFORMS: dict[str, Any] = {}
-
-
 def _emit_metric(step: str, started_at: float) -> None:
     duration_ms = int((time.perf_counter() - started_at) * 1000)
     logger.info("pipeline_metric", metric="pipeline.step.duration_ms", step=step, value=duration_ms)
-
-
-def _row_count(result: dict[str, Any]) -> int:
-    v = result.get("row_count", 0)
-    try:
-        return int(v)
-    except (TypeError, ValueError):
-        return 0
 
 
 # ── Generic Bronze asset factory ─────────────────────────────────────────────
@@ -76,48 +63,6 @@ def _make_bronze_asset(source_name: str):
 
 def make_bronze_assets() -> list:
     return [_make_bronze_asset(name) for name in list_sources()]
-
-
-# ── Generic Silver asset factory ─────────────────────────────────────────────
-
-
-def _make_silver_asset(source_name: str):
-    transform = _SILVER_TRANSFORMS.get(source_name)
-    if transform is None:
-        return None
-
-    asset_name = f"{source_name}_silver"
-    bronze_dep = f"{source_name}_bronze"
-
-    @asset(
-        name=asset_name,
-        group_name="silver",
-        description=f"Transform {source_name} Bronze -> Silver.",
-    )
-    def _impl(
-        context,
-        iceberg_catalog: IcebergCatalogResource,
-        **kwargs: dict[str, Any],
-    ) -> str:
-        _ = kwargs.get(bronze_dep)
-        started = time.perf_counter()
-        result = transform.run(iceberg_catalog.get_catalog())
-        context.add_output_metadata(
-            {"table": result["table"], "row_count": _row_count(result)}
-        )
-        _emit_metric(f"{source_name}_silver", started)
-        return str(result["table"])
-
-    return _impl
-
-
-def make_silver_assets() -> list:
-    assets: list = []
-    for name in list_sources():
-        fn = _make_silver_asset(name)
-        if fn is not None:
-            assets.append(fn)
-    return assets
 
 
 # ── Generic Freshness Sensor ─────────────────────────────────────────────────
@@ -160,49 +105,10 @@ def _make_freshness_sensor():
     return bronze_freshness_sensor
 
 
-# ── Generic Silver Asset Checks ──────────────────────────────────────────────
-
-
-def make_silver_checks() -> list:
-    checks: list = []
-
-    for source_name in _SILVER_TRANSFORMS:
-        silver_asset_name = f"{source_name}_silver"
-
-        def _make_check(src: str, asset_n: str):
-            @asset_check(
-                asset=asset_n,
-                description=f"{src} Silver has at least 1 row",
-            )
-            def _check(
-                iceberg_catalog: IcebergCatalogResource,
-                **kwargs: Any,
-            ) -> AssetCheckResult:
-                _ = kwargs
-                df = iceberg_io.scan_table(iceberg_catalog.get_catalog(), "silver", src)
-                row_count = len(df)
-                passed = row_count >= 1
-                return AssetCheckResult(
-                    passed=passed,
-                    description=f"{src} Silver has {row_count} rows",
-                    metadata={"row_count": row_count},
-                )
-
-            return _check
-
-        checks.append(_make_check(source_name, silver_asset_name))
-
-    return checks
-
-
 # ── Module-level generation ──────────────────────────────────────────────────
 
 _bronze_assets = make_bronze_assets()
-_silver_assets = make_silver_assets()
 _bronze_freshness_sensor = _make_freshness_sensor()
-_silver_checks = make_silver_checks()
 
 bronze_assets = _bronze_assets
-silver_assets = _silver_assets
-all_assets = [*_bronze_assets, *_silver_assets]
-mlperf_freshness_sensor = _bronze_freshness_sensor
+all_assets = [*_bronze_assets]

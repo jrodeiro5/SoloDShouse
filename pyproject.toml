@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "solodshouse"
 version = "0.1.0"
-description = "Local-first DS/ML/AI platform — ENTSO-E energy data, TFM UCM"
+description = "Domain-agnostic local-first data lakehouse + ML + AI agent platform"
 requires-python = ">=3.11"
 dependencies = [
     # Object storage + Iceberg
@@ -20,19 +20,18 @@ dependencies = [
     "trino>=0.336",
     # ML
     "scikit-learn>=1.8",
-    "scikit-lego>=0.9",       # custom transformers + pipeline utilities for sklearn
-    "skforecast>=0.14",       # sklearn-compatible time series forecasting (energy forecast)
     "xgboost>=3.2",
     "lightgbm>=4.6",
     "mlflow>=3.10",
     # API / ingestion
     "requests>=2.33",
     "pydantic>=2.12",
-    "entsoe-py>=0.8.0",          # ENTSO-E Transparency Platform client
-    "fredapi>=0.5.2",            # FRED (St. Louis Fed) economic data client
-    "toolz>=1.0",                # functional utilities (pipe, curry, compose)
-    # Agent tooling
-    "fastapi-mcp>=0.3",          # auto-generate MCP server from FastAPI routes
+    # Connection layer (SDS-044)
+    "cryptography>=44.0",
+    "pyjwt>=2.13",
+    # Agent proxy (SDS-024)
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
     # Observability
     "structlog>=25.5",
 ]
@@ -58,9 +57,6 @@ dev = [
     "complexipy>=0.5",        # cognitive complexity analyzer
     "vulture>=2.14",          # dead code finder
     "wat-inspector>=0.3",     # object inspector for debugging (wat(obj))
-    "dlt>=1.9",               # data load tool — evaluate vs hand-rolled collectors
-    "hcloud>=2.4",            # Hetzner Cloud Python SDK (VPS automation)
-    "markitdown>=0.1",        # Moodle content extraction → markdown (dev tooling only)
     "ipykernel>=6.29",
 ]
 
