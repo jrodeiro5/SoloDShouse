@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoloDShouse</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 3rem 1rem; }
+  h1 { font-size: 2rem; font-weight: 600; margin-bottom: .25rem; color: #f0f6fc; }
+  p { color: #8b949e; margin-bottom: 2.5rem; font-size: .95rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; max-width: 900px; width: 100%; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.25rem; text-decoration: none; color: inherit; transition: border-color .15s; }
+  .card:hover { border-color: #58a6ff; }
+  .card h3 { font-size: 1rem; font-weight: 600; color: #58a6ff; margin-bottom: .35rem; }
+  .card span { font-size: .8rem; color: #8b949e; }
+</style>
+</head>
+<body>
+<h1>SoloDShouse</h1>
+<p>Domain-Agnostic Data Platform — local-first, zero cloud</p>
+<div class="grid">
+  <a class="card" href="/dagster">
+    <h3>Dagster</h3><span>Asset orchestration · port 3000</span>
+  </a>
+  <a class="card" href="/openwebui">
+    <h3>Open WebUI</h3><span>AI Chat · port 3001</span>
+  </a>
+  <a class="card" href="/evidence">
+    <h3>Evidence.dev</h3><span>BI Dashboards · port 3002</span>
+  </a>
+  <a class="card" href="/langfuse">
+    <h3>Langfuse</h3><span>LLM Traces · port 3003</span>
+  </a>
+  <a class="card" href="/litellm">
+    <h3>LiteLLM</h3><span>LLM Gateway · port 4000</span>
+  </a>
+  <a class="card" href="/mlflow">
+    <h3>MLflow</h3><span>Experiment Tracking · port 5000</span>
+  </a>
+  <a class="card" href="/trino">
+    <h3>Trino</h3><span>SQL Engine · port 8080</span>
+  </a>
+  <a class="card" href="/seaweedfs">
+    <h3>SeaweedFS</h3><span>Object Store · port 9333</span>
+  </a>
+</div>
+</body>
+</html>

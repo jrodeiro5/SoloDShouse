@@ -1,0 +1,23 @@
+# LiteLLM configuration — SoloDShouse local-only LLM gateway
+# SDS-023: Ollama eliminated — llama.cpp/vLLM + LiteLLM
+# SDS-038: LLM Gateway Model Selection
+
+model_list:
+  - model_name: fast
+    litellm_params:
+      model: openai/fast
+      api_base: ${LLM_API_BASE:-http://llama-cpp:8080/v1}
+      api_key: ${LLM_API_KEY:-not-needed}
+  - model_name: powerful
+    litellm_params:
+      model: openai/powerful
+      api_base: ${LLM_API_BASE:-http://llama-cpp:8080/v1}
+      api_key: ${LLM_API_KEY:-not-needed}
+
+general_settings:
+  master_key: ${LITELLM_MASTER_KEY}
+  disable_error_logs: false
+
+litellm_settings:
+  drop_params: true
+  set_verbose: false
