@@ -4,11 +4,11 @@ Read before any changes. SoloDShouse = **fork** of SoloLakehouse v2.5 — not th
 
 ## What This Project Is
 
-**SoloDShouse (Solo Data Science House)** — local-first DS + AI agent platform, TFM at Universidad Complutense de Madrid (Master in Big Data, Data Science & AI).
+**SoloDShouse** — domain-agnostic local-first data lakehouse + ML + AI agent platform.
 
-**Mission:** Full DS/ML/AI stack — data lakehouse, ML experiments, AI agents, neural networks — runs on single powerful local machine + €5/month Hetzner VPS. Zero cloud surprise bills. Zero vendor lock-in.
+**Mission:** Self-hosted data platform that adapts to any domain. Connector-driven architecture — ship empty, connect your sources. Runs on single powerful local machine + €5/month Hetzner VPS.
 
-**Domain:** European energy data (ENTSO-E grid + Open-Meteo weather) replacing original SoloLakehouse financial domain (ECB/DAX).
+**Domain:** Agnostic — no bundled collectors, transforms, or schemas. You bring data sources via connections. See SDS-043/SDS-044.
 
 **Forked from:** SoloLakehouse v2.5 (github.com/Jiahong-Que-9527/SoloLakehouse). Original ADRs 001-020 in `docs/sololakehouse_legacy_docs/decisions/` — read-only, never modify.
 
@@ -175,7 +175,7 @@ make clean           # Stop + delete docker/data/ + purge volumes
 
 ```
 ingestion/
-  collectors/         # ENTSOECollector, OpenMeteoCollector (replaces ECB/DAX)
+  collectors/         # Collector registry (SDS-043) — empty by default
   schema/             # Pydantic v2 models
   quality/            # Bronze-layer quality checks
   bronze_writer.py    # Iceberg append via pyiceberg
@@ -194,7 +194,7 @@ ml/
 
 agents/
   deepagents_proxy.py            # FastAPI proxy: OpenAI API -> deepagents
-  tools/                         # Custom MCP tools (ENTSO-E queries, Iceberg reads)
+  tools/                         # Custom MCP tools (Iceberg queries, API probes)
 
 docs/
   solodshouse/                   # SoloDShouse docs (our space)
@@ -349,7 +349,7 @@ See `docs/solodshouse/decisions/` for full SDS ADR list. Summary:
 | Superset | Eliminated — Evidence.dev covers BI | SDS-022 |
 | Ollama | Eliminated — llama.cpp/vLLM + LiteLLM | SDS-023 |
 | Agent harness | deepagents (LangGraph) | SDS-024 |
-| Domain | ENTSO-E energy (not ECB/DAX finance) | SDS-030 |
+| Domain | Agnostic — connector-driven, no bundled domain | SDS-030 |
 
 ## Things to Watch Out For
 
