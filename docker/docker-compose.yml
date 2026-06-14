@@ -4,17 +4,26 @@ services:
     container_name: sds-seaweedfs
     command: server -s3 -s3.port=8333 -master.port=9333 -volume.port=9334
     ports:
-      - "8333:8333"
-      - "9333:9333"
+    - 8333:8333
+    - 9333:9333
     volumes:
-      - ./data/seaweedfs:/data
+    - ./data/seaweedfs:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8333/"]
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8333/
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 15s
-
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 128M
   postgres:
     image: pgvector/pgvector:pg17
     container_name: sds-postgres
@@ -22,17 +31,24 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "${PG_PORT:-5432}:5432"
+    - ${PG_PORT:-5432}:5432
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
-      - ../config/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    - ./data/postgres:/var/lib/postgresql/data
+    - ../config/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      test:
+      - CMD-SHELL
+      - pg_isready -U ${POSTGRES_USER}
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 256M
   hive-metastore:
     build: ./hive-metastore
     container_name: sds-hive-metastore
@@ -51,18 +67,27 @@ services:
       DATA_BUCKET: ${DATA_BUCKET:-solodshouse-data}
       WAREHOUSE_URI: ${WAREHOUSE_URI:-s3a://solodshouse-data/warehouse/}
     ports:
-      - "9083:9083"
+    - 9083:9083
     healthcheck:
-      test: ["CMD", "bash", "-c", "echo 'status' | nc -w 2 localhost 9083 || exit 1"]
+      test:
+      - CMD
+      - bash
+      - -c
+      - echo 'status' | nc -w 2 localhost 9083 || exit 1
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 60s
-
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 512M
   trino:
     image: trinodb/trino:480
     container_name: sds-trino
-    user: "0"
+    user: '0'
     depends_on:
       hive-metastore:
         condition: service_healthy
@@ -72,19 +97,30 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-solodshouse}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-solodshouse123}
     ports:
-      - "8080:8080"
+    - 8080:8080
     volumes:
-      - ../config/trino/config.properties:/etc/trino/config.properties:ro
-      - ../config/trino/catalog:/etc/trino/catalog-template:ro
-      - ../scripts/trino-entrypoint.sh:/usr/local/bin/trino-entrypoint.sh:ro
-    entrypoint: ["/bin/bash", "/usr/local/bin/trino-entrypoint.sh"]
+    - ../config/trino/config.properties:/etc/trino/config.properties:ro
+    - ../config/trino/catalog:/etc/trino/catalog-template:ro
+    - ../scripts/trino-entrypoint.sh:/usr/local/bin/trino-entrypoint.sh:ro
+    entrypoint:
+    - /bin/bash
+    - /usr/local/bin/trino-entrypoint.sh
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/info"]
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8080/v1/info
       interval: 15s
       timeout: 5s
       retries: 10
       start_period: 90s
-
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+        reservations:
+          memory: 1536M
   mlflow:
     build: ./mlflow
     container_name: sds-mlflow
@@ -104,14 +140,23 @@ services:
       AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-solodshouse}
       AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-solodshouse123}
     ports:
-      - "5000:5000"
+    - 5000:5000
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:5000/health
       interval: 15s
       timeout: 10s
       retries: 10
       start_period: 120s
-
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 256M
   dagster-webserver:
     build:
       context: ..
@@ -150,18 +195,34 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       DAGSTER_HOME: /app/dagster
-    command: ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000", "-w", "/app/dagster/workspace.yaml"]
+    command:
+    - dagster-webserver
+    - -h
+    - 0.0.0.0
+    - -p
+    - '3000'
+    - -w
+    - /app/dagster/workspace.yaml
     ports:
-      - "3000:3000"
+    - 3000:3000
     volumes:
-      - ./data/dagster:/app/dagster/storage
+    - ./data/dagster:/app/dagster/storage
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/server_info"]
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:3000/server_info
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 60s
-
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 512M
   dagster-daemon:
     build:
       context: ..
@@ -202,45 +263,77 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       DAGSTER_HOME: /app/dagster
-    command: ["dagster-daemon", "run", "-w", "/app/dagster/workspace.yaml"]
+    command:
+    - dagster-daemon
+    - run
+    - -w
+    - /app/dagster/workspace.yaml
     volumes:
-      - ./data/dagster:/app/dagster/storage
+    - ./data/dagster:/app/dagster/storage
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import os; os.kill(1, 0)\""]
+      test:
+      - CMD-SHELL
+      - python -c "import os; os.kill(1, 0)"
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
-
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 256M
   litellm:
     image: ghcr.io/berriai/litellm:main-latest
     container_name: sds-litellm
-    profiles: ["agent", "full", "llm-7b", "llm-70b"]
+    profiles:
+    - agent
+    - full
+    - llm-7b
+    - llm-70b
     ports:
-      - "${LITELLM_PORT:-4000}:4000"
+    - ${LITELLM_PORT:-4000}:4000
     volumes:
-      - ../config/litellm/config.yaml:/app/config.yaml:ro
+    - ../config/litellm/config.yaml:/app/config.yaml:ro
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-litellm-master-key-change-me}
-    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    command:
+    - --config
+    - /app/config.yaml
+    - --port
+    - '4000'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:4000/health
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 10s
-
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 256M
   fastapi-proxy:
     build:
       context: ..
       dockerfile: docker/agent/Dockerfile
     container_name: sds-fastapi-proxy
-    profiles: ["agent", "full", "llm-7b", "llm-70b"]
+    profiles:
+    - agent
+    - full
+    - llm-7b
+    - llm-70b
     depends_on:
       litellm:
         condition: service_healthy
     ports:
-      - "${FASTAPI_PROXY_PORT:-8000}:8000"
+    - ${FASTAPI_PROXY_PORT:-8000}:8000
     environment:
       LITELLM_BASE_URL: http://litellm:4000
       LITELLM_API_KEY: ${LITELLM_MASTER_KEY:-sk-litellm-master-key-change-me}
@@ -250,221 +343,347 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-solodshouse}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-solodshouse123}
     volumes:
-      - ../agents:/app/agents:ro
-      - ./data/proxy:/app/data
-    command: ["uvicorn", "agents.deepagents_proxy:app", "--host", "0.0.0.0", "--port", "8000"]
+    - ../agents:/app/agents:ro
+    - ./data/proxy:/app/data
+    command:
+    - uvicorn
+    - agents.deepagents_proxy:app
+    - --host
+    - 0.0.0.0
+    - --port
+    - '8000'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8000/health
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 10s
-
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 128M
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: sds-open-webui
-    profiles: ["agent", "full", "llm-7b", "llm-70b"]
+    profiles:
+    - agent
+    - full
+    - llm-7b
+    - llm-70b
     depends_on:
       fastapi-proxy:
         condition: service_healthy
     ports:
-      - "${OPEN_WEBUI_PORT:-3001}:8080"
+    - ${OPEN_WEBUI_PORT:-3001}:8080
     volumes:
-      - ./data/open-webui:/app/backend/data
+    - ./data/open-webui:/app/backend/data
     environment:
       OPENAI_API_BASE_URL: http://fastapi-proxy:8000/v1
       OPENAI_API_KEY: ${OPEN_WEBUI_API_KEY:-sk-dummy}
       WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:-}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8080/health
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
-
-  # ── Portal ──────────────────────────────────────────────────────────────
-
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 512M
   nginx-portal:
     image: nginx:alpine
     container_name: sds-nginx-portal
-    profiles: ["bi", "full"]
+    profiles:
+    - bi
+    - full
     ports:
-      - "${PORTAL_PORT:-8090}:8090"
+    - ${PORTAL_PORT:-8090}:8090
     volumes:
-      - ../config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ../config/nginx/index.html:/usr/share/nginx/html/index.html:ro
+    - ../config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    - ../config/nginx/index.html:/usr/share/nginx/html/index.html:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8090/"]
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8090/
       interval: 15s
       timeout: 5s
       retries: 3
       start_period: 5s
-
-  # ── LLM Inference (llama.cpp) ───────────────────────────────────────────
-
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 64M
   llama-cpp:
     image: ghcr.io/ggerganov/llama.cpp:server
     container_name: sds-llama-cpp
-    profiles: ["llm", "llm-12b"]
+    profiles:
+    - llm
+    - llm-12b
     ports:
-      - "${LLAMA_CPP_PORT:-8081}:8080"
+    - ${LLAMA_CPP_PORT:-8081}:8080
     volumes:
-      - ${LLAMA_MODEL_DIR:-./docker/data/models}:/models:ro
+    - ${LLAMA_MODEL_DIR:-./docker/data/models}:/models:ro
     command:
-      - "--host"
-      - "0.0.0.0"
-      - "--port"
-      - "8080"
-      - "--model"
-      - "/models/${LLAMA_MODEL_FILE:-gemma-4-12b-Q4_K_M.gguf}"
-      - "--n-gpu-layers"
-      - "${LLAMA_N_GPU_LAYERS:-99}"
-      - "--ctx-size"
-      - "${LLAMA_CTX_SIZE:-8192}"
+    - --host
+    - 0.0.0.0
+    - --port
+    - '8080'
+    - --model
+    - /models/${LLAMA_MODEL_FILE:-gemma-4-12b-Q4_K_M.gguf}
+    - --n-gpu-layers
+    - ${LLAMA_N_GPU_LAYERS:-99}
+    - --ctx-size
+    - ${LLAMA_CTX_SIZE:-8192}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8080/health
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 60s
-
-  # ── ML Layer ────────────────────────────────────────────────────────────
-
+    deploy:
+      resources:
+        limits:
+          memory: '0'
+        reservations:
+          memory: '0'
   bentoml:
     image: bentoml/bentoml:latest
     container_name: sds-bentoml
-    profiles: ["ml", "full", "llm-12b", "llm-70b"]
+    profiles:
+    - ml
+    - full
+    - llm-12b
+    - llm-70b
     ports:
-      - "${BENTOML_PORT:-3002}:3000"
+    - ${BENTOML_PORT:-3002}:3000
     volumes:
-      - ./data/bentoml:/home/bentoml/bento
+    - ./data/bentoml:/home/bentoml/bento
     environment:
       BENTOML_HOME: /home/bentoml/bento
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:3000/healthz
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 20s
-
-  # ── NoSQL ───────────────────────────────────────────────────────────────
-
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 256M
   mongodb:
     image: mongo:7
     container_name: sds-mongodb
-    profiles: ["full", "llm-12b", "llm-70b"]
+    profiles:
+    - full
+    - llm-12b
+    - llm-70b
     ports:
-      - "${MONGO_PORT:-27017}:27017"
+    - ${MONGO_PORT:-27017}:27017
     volumes:
-      - ./data/mongodb:/data/db
+    - ./data/mongodb:/data/db
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-solodshouse}
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test:
+      - CMD
+      - mongosh
+      - --eval
+      - db.adminCommand('ping')
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 10s
-
-  # ── Observability ───────────────────────────────────────────────────────
-
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 512M
   langfuse:
     image: ghcr.io/langfuse/langfuse:latest
     container_name: sds-langfuse
-    profiles: ["observability", "full", "llm-12b", "llm-70b"]
+    profiles:
+    - observability
+    - full
+    - llm-12b
+    - llm-70b
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - "${LANGFUSE_PORT:-3003}:3000"
+    - ${LANGFUSE_PORT:-3003}:3000
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/langfuse
       NEXTAUTH_SECRET: ${LANGFUSE_SECRET:-langfuse-secret-change-me}
       NEXTAUTH_URL: http://localhost:${LANGFUSE_PORT:-3003}
       SALT: ${LANGFUSE_SALT:-langfuse-salt-change-me}
-      TELEMETRY_ENABLED: "false"
+      TELEMETRY_ENABLED: 'false'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/public/health"]
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:3000/api/public/health
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
-
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 512M
   prometheus:
     image: prom/prometheus:latest
     container_name: sds-prometheus
-    profiles: ["observability", "full", "llm-12b", "llm-70b"]
+    profiles:
+    - observability
+    - full
+    - llm-12b
+    - llm-70b
     ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
+    - ${PROMETHEUS_PORT:-9090}:9090
     volumes:
-      - ../config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./data/prometheus:/prometheus
+    - ../config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    - ./data/prometheus:/prometheus
     command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
-      - "--web.console.templates=/usr/share/prometheus/consoles"
+    - --config.file=/etc/prometheus/prometheus.yml
+    - --storage.tsdb.path=/prometheus
+    - --web.console.libraries=/usr/share/prometheus/console_libraries
+    - --web.console.templates=/usr/share/prometheus/consoles
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      test:
+      - CMD
+      - wget
+      - -q
+      - --spider
+      - http://localhost:9090/-/healthy
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 10s
-
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 128M
   alertmanager:
     image: prom/alertmanager:latest
     container_name: sds-alertmanager
-    profiles: ["observability", "full", "llm-12b", "llm-70b"]
+    profiles:
+    - observability
+    - full
+    - llm-12b
+    - llm-70b
     ports:
-      - "${ALERTMANAGER_PORT:-9093}:9093"
+    - ${ALERTMANAGER_PORT:-9093}:9093
     volumes:
-      - ../config/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    - ../config/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     command:
-      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    - --config.file=/etc/alertmanager/alertmanager.yml
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9093/-/healthy"]
+      test:
+      - CMD
+      - wget
+      - -q
+      - --spider
+      - http://localhost:9093/-/healthy
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 10s
-
-  # ── BI ──────────────────────────────────────────────────────────────────
-
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 64M
   evidence:
     image: evidence-dev/evidence:latest
     container_name: sds-evidence
-    profiles: ["bi", "full", "llm-12b", "llm-70b"]
+    profiles:
+    - bi
+    - full
+    - llm-12b
+    - llm-70b
     ports:
-      - "${EVIDENCE_PORT:-3100}:3000"
+    - ${EVIDENCE_PORT:-3100}:3000
     volumes:
-      - ../evidence:/app
+    - ../evidence:/app
     environment:
       DUCKDB_PATH: /app/data/gold.duckdb
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:3000
       interval: 15s
       timeout: 5s
       retries: 3
       start_period: 20s
-
-  # ── On-Demand ───────────────────────────────────────────────────────────
-
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 256M
   spark:
     image: bitnami/spark:latest
     container_name: sds-spark
-    profiles: ["spark"]
+    profiles:
+    - spark
     ports:
-      - "${SPARK_UI_PORT:-4040}:4040"
-      - "${SPARK_MASTER_PORT:-7077}:7077"
+    - ${SPARK_UI_PORT:-4040}:4040
+    - ${SPARK_MASTER_PORT:-7077}:7077
     volumes:
-      - ./data/spark:/opt/spark/work
+    - ./data/spark:/opt/spark/work
     environment:
       SPARK_MODE: master
       SPARK_MASTER_HOST: spark
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4040"]
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:4040
       interval: 15s
       timeout: 5s
       retries: 3
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 2048M
