@@ -26,9 +26,9 @@ class FernetVault:
         env_key = key or os.environ.get("SOLODSHOUSE_VAULT_KEY")
         if not env_key:
             raise OSError(
-                "SOLODSHOUSE_VAULT_KEY is not set. Generate a key with "
-                "`python -c 'from connections.vault import generate_key; "
-                "print(generate_key())'` and export it."
+                "SOLODSHOUSE_VAULT_KEY is not set. "
+                "Generate a key with `python -c 'from connections.vault import generate_key; print(generate_key())'` "
+                "and export it."
             )
         try:
             self._fernet = Fernet(env_key.encode("utf-8"))
