@@ -55,8 +55,18 @@ def main() -> None:
 
     tables = [
         # (namespace, table_name, schema, partition_spec)
-        ("bronze", "mlperf_benchmarks", BRONZE_MLPERF_BENCHMARKS_SCHEMA, BRONZE_MLPERF_BENCHMARKS_PARTITION),
-        ("bronze", "cloud_gpu_pricing", BRONZE_CLOUD_GPU_PRICING_SCHEMA, BRONZE_CLOUD_GPU_PRICING_PARTITION),
+        (
+            "bronze",
+            "mlperf_benchmarks",
+            BRONZE_MLPERF_BENCHMARKS_SCHEMA,
+            BRONZE_MLPERF_BENCHMARKS_PARTITION,
+        ),
+        (
+            "bronze",
+            "cloud_gpu_pricing",
+            BRONZE_CLOUD_GPU_PRICING_SCHEMA,
+            BRONZE_CLOUD_GPU_PRICING_PARTITION,
+        ),
         ("bronze", "fx_rates", BRONZE_FX_RATES_SCHEMA, BRONZE_FX_RATES_PARTITION),
         ("bronze", "rejected_records", BRONZE_REJECTED_SCHEMA, None),
         ("silver", "mlperf_efficiency", SILVER_MLPERF_EFFICIENCY_SCHEMA, None),

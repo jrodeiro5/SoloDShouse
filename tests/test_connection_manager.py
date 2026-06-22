@@ -70,7 +70,7 @@ class TestConnectionManager:
         assert conn.config["user"] == "reader"  # type: ignore[index, union-attr]
         assert conn.config["password"] == "s3cr3t"  # type: ignore[index, union-attr]
 
-        from connections.manager import PostgresConfig, S3Config, RestConfig
+        from connections.manager import PostgresConfig, RestConfig, S3Config
         assert isinstance(conn.config, PostgresConfig)
         assert conn.config.host == "db.example.com"
         assert conn.config.port == 5432
@@ -89,7 +89,9 @@ class TestConnectionManager:
         assert weather_conn.config.base_url == "https://api.weather.com"
         assert weather_conn.config.endpoint == "v1/forecast"
 
-    def test_get_connection_missing_raises_keyerror(self, config_file: Path, vault: FernetVault) -> None:
+    def test_get_connection_missing_raises_keyerror(
+        self, config_file: Path, vault: FernetVault
+    ) -> None:
         mgr = ConnectionManager(config_path=config_file, vault=vault)
         with pytest.raises(KeyError, match="not found"):
             mgr.get_connection("nonexistent")

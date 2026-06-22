@@ -6,7 +6,6 @@ import importlib
 import tempfile
 from pathlib import Path
 from textwrap import dedent
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -14,8 +13,8 @@ import pytest
 from connections.manager import ConnectionManager
 from connections.vault import FernetVault, generate_key
 from ingestion.collectors.base import BaseCollector
-from ingestion.collectors.dynamic import DynamicCollector, _MGR
-from ingestion.collectors.registry import get_collector, list_sources, register_collector
+from ingestion.collectors.dynamic import _MGR, DynamicCollector
+from ingestion.collectors.registry import get_collector, register_collector
 
 
 @pytest.fixture

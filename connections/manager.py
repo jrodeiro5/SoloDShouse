@@ -19,17 +19,18 @@ import warnings
 from pathlib import Path
 from typing import Any, Union
 
-warnings.filterwarnings(
-    "ignore",
-    category=UserWarning,
-    message='Field name "schema" in "PostgresConfig" shadows an attribute in parent "BaseConfigModel"',
-)
-
 import structlog
 import yaml
 from pydantic import BaseModel, Field, model_validator
 
 from connections.vault import FernetVault
+
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message='Field name "schema" in "PostgresConfig" shadows '
+    'an attribute in parent "BaseConfigModel"',
+)
 
 logger = structlog.get_logger()
 
