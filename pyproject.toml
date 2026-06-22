@@ -80,5 +80,5 @@ packages = ["ingestion", "transformations", "ml", "agents"]
 config = "ruff.toml"
 
 [tool.mypy]
-files = ["ingestion", "transformations", "ml", "agents", "scripts"]
+files = ["ingestion", "transformations", "ml", "agents", "scripts", "storage_config.py"]
 ignore_missing_imports = true
