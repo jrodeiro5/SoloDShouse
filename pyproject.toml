@@ -54,6 +54,7 @@ dev = [
     "ruff>=0.15",
     "mypy>=1.19",
     "types-requests>=2.33",
+    "types-PyYAML",
     "dbt-core>=1.9",
     "dbt-duckdb>=1.9",
     "bandit[toml]>=1.8",      # security linter (PyCQA)

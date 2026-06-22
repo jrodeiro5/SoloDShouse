@@ -28,16 +28,19 @@ def test_collector_registration() -> None:
 
 
 def test_pkgutil_walk_packages_is_called() -> None:
+    import pkgutil
+
     import ingestion.collectors
 
     with patch("pkgutil.walk_packages") as mock_walk, patch(
         "importlib.import_module"
     ) as mock_import:
+        # mock walk_packages to return ModuleInfo objects
         mock_walk.return_value = [
-            (None, "ingestion.collectors.mock_collector", False)
+            pkgutil.ModuleInfo(None, "ingestion.collectors.mock_collector", False)
         ]
-        
+
         importlib.reload(ingestion.collectors)
-        
+
         mock_walk.assert_called_once()
         mock_import.assert_any_call("ingestion.collectors.mock_collector")
