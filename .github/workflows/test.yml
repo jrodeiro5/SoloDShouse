@@ -27,7 +27,7 @@ jobs:
           python-version: "3.13"
       # dagster/ imports the PyPI dagster package; install so mypy does not
       # treat the local dagster/ folder as the module.
-      - run: pip install -r requirements.txt -r requirements-dagster.txt
+      - run: pip install ".[dev]" -r requirements-dagster.txt
       - run: mypy ingestion/ transformations/ ml/ scripts/ dagster/
 
   test:
@@ -38,7 +38,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install -r requirements.txt
+      - run: pip install ".[qa]" -r requirements-dagster.txt
       - run: pytest tests/ -v --tb=short --ignore=tests/integration --cov=ingestion --cov=transformations --cov=ml --cov-report=term-missing --cov-fail-under=70
 
   compose-demo:
