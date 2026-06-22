@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
-from typing import Mapping
+from typing import Final
 
-DEFAULT_DATA_BUCKET = "solodshouse-data"
-DEFAULT_MLFLOW_ARTIFACT_BUCKET = "solodshouse-mlflow"
-DEFAULT_WAREHOUSE_PREFIX = "warehouse"
+DEFAULT_DATA_BUCKET: Final[str] = "solodshouse-data"
+DEFAULT_MLFLOW_ARTIFACT_BUCKET: Final[str] = "solodshouse-mlflow"
+DEFAULT_WAREHOUSE_PREFIX: Final[str] = "warehouse"
 
 
 @dataclass(frozen=True)

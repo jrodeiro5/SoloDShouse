@@ -110,7 +110,7 @@ lint:
 
 # Requires Dagster on PYTHONPATH (same as CI): pip install -r requirements.txt -r requirements-dagster.txt
 typecheck:
-	$(PYTHON) -m mypy ingestion/ transformations/ ml/ scripts/ dagster/
+	$(PYTHON) -m mypy ingestion/ transformations/ ml/ scripts/ dagster/ storage_config.py
 
 dagster-install:
 	$(PYTHON) -m pip install -r requirements-dagster.txt
