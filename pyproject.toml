@@ -54,6 +54,7 @@ dev = [
     "ruff>=0.15",
     "mypy>=1.19",
     "types-requests>=2.33",
+    "types-PyYAML",
     "dbt-core>=1.9",
     "dbt-duckdb>=1.9",
     "bandit[toml]>=1.8",      # security linter (PyCQA)
@@ -80,5 +81,5 @@ packages = ["ingestion", "transformations", "ml", "agents"]
 config = "ruff.toml"
 
 [tool.mypy]
-files = ["ingestion", "transformations", "ml", "agents", "scripts"]
+files = ["ingestion", "transformations", "ml", "agents", "scripts", "storage_config.py"]
 ignore_missing_imports = true
