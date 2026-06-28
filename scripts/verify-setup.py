@@ -16,7 +16,6 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from runtime_identity import get_runtime_identity  # noqa: E402
-from storage_config import get_storage_config  # noqa: E402
 
 StatusTuple = tuple[str, str, str]
 VALID_STATUSES = {"PASS", "FAIL", "TIMEOUT"}
