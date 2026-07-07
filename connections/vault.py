@@ -27,7 +27,7 @@ class FernetVault:
         if not env_key:
             raise OSError(
                 "SOLODSHOUSE_VAULT_KEY is not set. "
-                "Generate a key with `python -c 'from connections.vault import generate_key; print(generate_key())'` "
+                "Generate a key with `python -c 'from connections.vault import generate_key; print(generate_key())'` "  # noqa: E501
                 "and export it."
             )
         try:
