@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
 from textwrap import dedent
@@ -45,7 +46,9 @@ def config_file(vault: FernetVault) -> Path:
         base_url: https://api.weather.com
         endpoint: v1/forecast
     """)
-    tmp = Path(tempfile.mktemp(suffix=".yaml"))
+    fd, path = tempfile.mkstemp(suffix=".yaml")
+    os.close(fd)
+    tmp = Path(path)
     tmp.write_text(yaml_content)
     return tmp
 
@@ -117,7 +120,7 @@ class TestConnectionManager:
             user: admin
             password: plaintext
         """)
-        tmp = Path(tempfile.mktemp(suffix=".yaml"))
+        tmp = Path(tempfile.mkstemp(suffix=".yaml")[1])
         tmp.write_text(yaml)
         mgr = ConnectionManager(config_path=tmp, vault=vault)
         assert mgr.get_connection("env_test").config["host"] == "prod-db.example.com"  # type: ignore[index, union-attr]
@@ -134,7 +137,7 @@ class TestConnectionManager:
             user: admin
             password: pw
         """)
-        tmp = Path(tempfile.mktemp(suffix=".yaml"))
+        tmp = Path(tempfile.mkstemp(suffix=".yaml")[1])
         tmp.write_text(yaml)
         with pytest.raises(ValueError, match="MISSING_VAR"):
             ConnectionManager(config_path=tmp, vault=vault)
@@ -146,7 +149,7 @@ class TestConnectionManager:
             type: kafka
             host: localhost
         """)
-        tmp = Path(tempfile.mktemp(suffix=".yaml"))
+        tmp = Path(tempfile.mkstemp(suffix=".yaml")[1])
         tmp.write_text(yaml)
         with pytest.raises(ValueError, match="unknown type"):
             ConnectionManager(config_path=tmp, vault=vault)
@@ -157,7 +160,7 @@ class TestConnectionManager:
           - type: postgres
             host: localhost
         """)
-        tmp = Path(tempfile.mktemp(suffix=".yaml"))
+        tmp = Path(tempfile.mkstemp(suffix=".yaml")[1])
         tmp.write_text(yaml)
         with pytest.raises(ValueError, match="name"):
             ConnectionManager(config_path=tmp, vault=vault)
@@ -175,7 +178,7 @@ class TestConnectionManager:
             type: s3
             bucket: new-bucket
         """)
-        tmp = Path(tempfile.mktemp(suffix=".yaml"))
+        tmp = Path(tempfile.mkstemp(suffix=".yaml")[1])
         tmp.write_text(yaml1)
         mgr = ConnectionManager(config_path=tmp, vault=vault)
         assert mgr.list_connections() == ["first"]
