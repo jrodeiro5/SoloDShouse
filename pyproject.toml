@@ -71,6 +71,8 @@ qa = [
     "pytest-cov>=7.1",
     "pytest-asyncio>=0.24",
     "playwright>=1.49",       # Moodle browser fallback + future E2E
+    "dbt-core>=1.9",          # dbt scaffold tests (SDS-041)
+    "dbt-duckdb>=1.9",
 ]
 
 [tool.hatch.build.targets.wheel]
