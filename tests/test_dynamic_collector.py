@@ -60,7 +60,7 @@ def conn_yaml(vault: FernetVault) -> Path:
         path: /tmp/test-data
         file_glob: "*.csv"
     """)
-    tmp = Path(tempfile.mktemp(suffix=".yaml"))
+    tmp = Path(tempfile.mkstemp(suffix=".yaml")[1])
     tmp.write_text(content)
     return tmp
 

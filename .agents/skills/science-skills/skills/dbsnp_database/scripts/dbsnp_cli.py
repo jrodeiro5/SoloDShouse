@@ -122,23 +122,34 @@ def _fetch_json(url, allow_not_found=False, allow_ref_mismatch=False):
       if allow_ref_mismatch:
         raise ReferenceMismatchError(error_msg) from exc
       _die(
-          f"HTTP 500 from {url}: {error_msg}\n"
+          f"HTTP 500 from {_redact_url(url)}: {error_msg}\n"
           "AGENT INSTRUCTION: This error indicates the reference allele does "
           "not match the sequence at this position. DO NOT RETRY the same "
           "query mechanically. Verify if the coordinates belong to a different "
           "assembly (e.g., GRCh38 vs GRCh37)."
       )
 
-    _die(f"HTTP {exc.status_code} from {url}: {error_msg}")
+    _die(f"HTTP {exc.status_code} from {_redact_url(url)}: {error_msg}")
   except Exception as exc:
-    _die(f"Request failed for {url}: {exc}")
-  _die(f"All retries failed for {url}")
+    _die(f"Request failed for {_redact_url(url)}: {exc}")
+  _die(f"All retries failed for {_redact_url(url)}")
 
 
 def _die(message):
   """Print a JSON error object to stdout and exit with status 1."""
   print(json.dumps({"error": message}, indent=2))
   sys.exit(1)
+
+
+def _redact_url(url):
+  """Redact API key parameter from URLs for safe error logging."""
+  idx = url.find("api_key=")
+  if idx == -1:
+    return url
+  end = url.find("&", idx)
+  if end == -1:
+    return url[:idx] + "api_key=REDACTED"
+  return url[:idx] + "api_key=REDACTED" + url[end:]
 
 
 def _write_output(data, output_path):
