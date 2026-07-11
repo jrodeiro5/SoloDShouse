@@ -22,14 +22,17 @@ from typing import Any, Union
 warnings.filterwarnings(
     "ignore",
     category=UserWarning,
-    message='Field name "schema" in "PostgresConfig" shadows an attribute in parent "BaseConfigModel"',
+    message=(
+        'Field name "schema" in "PostgresConfig" '
+        "shadows an attribute in parent \"BaseConfigModel\""
+    ),
 )
 
-import structlog
-import yaml
-from pydantic import BaseModel, Field, model_validator
+import structlog  # noqa: E402
+import yaml  # noqa: E402
+from pydantic import BaseModel, Field, model_validator  # noqa: E402
 
-from connections.vault import FernetVault
+from connections.vault import FernetVault  # noqa: E402
 
 logger = structlog.get_logger()
 
