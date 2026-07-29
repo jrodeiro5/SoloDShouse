@@ -1,0 +1,114 @@
+topics:
+  - slug: concepts
+    title: Concepts
+    description: Core vocabulary and mental models for this codebase
+    parents: []
+
+  - slug: architecture
+    title: Architecture
+    description: System areas, ownership, and runtime behavior
+    parents: []
+
+  - slug: guides
+    title: Guides
+    description: Task-oriented instructions for maintainers
+    parents: []
+
+  - slug: decisions
+    title: Decisions
+    description: Architecturally meaningful choices and their consequences
+    parents: []
+
+  - slug: reference
+    title: Reference
+    description: Exact lookup material for commands, schemas, and configuration
+    parents: []
+
+  - slug: ingestion
+    title: Ingestion
+    description: Data collection, validation, and Bronze layer writing
+    parents:
+      - concepts
+      - architecture
+
+  - slug: connections
+    title: Connections
+    description: YAML-driven data source management with encryption
+    parents:
+      - architecture
+
+  - slug: data-flow
+    title: Data Flow
+    description: Bronze→Silver→Gold medallion architecture
+    parents:
+      - concepts
+
+  - slug: data-model
+    title: Data Model
+    description: Iceberg schemas, partitioning, and table operations
+    parents:
+      - concepts
+      - reference
+
+  - slug: orchestration
+    title: Orchestration
+    description: Dagster assets, jobs, schedules, and sensors
+    parents:
+      - architecture
+
+  - slug: dagster
+    title: Dagster
+    description: Pipeline orchestration and asset management
+    parents:
+      - orchestration
+
+  - slug: security
+    title: Security
+    description: Encryption, authentication, and access control
+    parents: []
+
+  - slug: configuration
+    title: Configuration
+    description: YAML-driven configuration and environment management
+    parents: []
+
+  - slug: deployment
+    title: Deployment
+    description: Docker Compose profiles and service deployment
+    parents:
+      - architecture
+
+  - slug: infrastructure
+    title: Infrastructure
+    description: Docker, services, and runtime environment
+    parents:
+      - deployment
+
+  - slug: agents
+    title: Agents
+    description: AI agent harness, proxy, and LLM integration
+    parents:
+      - architecture
+
+  - slug: api
+    title: API
+    description: REST APIs and proxy endpoints
+    parents:
+      - agents
+
+  - slug: proxy
+    title: Proxy
+    description: FastAPI proxy implementations
+    parents:
+      - api
+
+  - slug: operations
+    title: Operations
+    description: Pipeline execution, monitoring, and debugging
+    parents:
+      - guides
+
+  - slug: getting-started
+    title: Getting Started
+    description: Front door and entry points for new users
+    parents: []
