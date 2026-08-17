@@ -24,7 +24,7 @@ dependencies = [
     "scikit-learn>=1.8",
     "xgboost>=3.2",
     "lightgbm>=4.6",
-    "mlflow>=3.10",
+    "mlflow>=3.15.0",
     # API / ingestion
     "requests>=2.33",
     "pydantic>=2.12",
