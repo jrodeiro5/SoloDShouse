@@ -1,0 +1,30 @@
+almanac/topics.yaml
+  s_f6a276f4da78c8::t_406fff1d82456f 42,115-142
+  s_303c9fc79e39da::t_d3b28dd986ce5d 143-148
+almanac/decisions/overview.md
+  s_303c9fc79e39da::t_d3b28dd986ce5d 36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "c48db6459bb10630f2a75d3cd4946b8a60a87abb",
+  "prompts": {},
+  "sessions": {
+    "s_303c9fc79e39da": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a024fa-3f43-79f3-9aa5-49879af3c723",
+        "model": "gpt-5.4-mini"
+      },
+      "human_author": "jrodeiro5 <jrodeiro.dev@gmail.com>"
+    },
+    "s_f6a276f4da78c8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe7a1-55c2-7d33-a529-68b0e5086670",
+        "model": "gpt-5.4-mini"
+      },
+      "human_author": "jrodeiro5 <jrodeiro.dev@gmail.com>"
+    }
+  }
+}
