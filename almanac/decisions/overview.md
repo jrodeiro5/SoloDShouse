@@ -33,6 +33,7 @@ behavior.
 |----|-------|--------|---------|
 | [SDS-002](docs/solodshouse/decisions/SDS-002-duckdb-complements-trino.md) | DuckDB complements Trino | Active | DuckDB for local queries, Trino for federated SQL |
 | [SDS-014](docs/solodshouse/decisions/SDS-014-eliminate-openmetadata.md) | Eliminate OpenMetadata | Active | Remove OpenMetadata; use dbt docs + MetricFlow + Adala for data governance |
+| [SDS-021](docs/solodshouse/decisions/SDS-021-evidence-dev-bi.md) | Evidence.dev BI | Proposed | Use Evidence.dev (markdown-first static BI) as the sole BI tool; deployed in the bi compose profile |
 | [SDS-022](docs/solodshouse/decisions/SDS-022-superset-eliminated.md) | Superset eliminated | Active | Remove Apache Superset; Evidence.dev covers BI needs |
 | [SDS-023](docs/solodshouse/decisions/SDS-023-no-ollama-llm-inference.md) | No Ollama LLM inference | Active | Use llama.cpp/vLLM + LiteLLM instead of Ollama for LLM inference |
 | [SDS-025](docs/solodshouse/decisions/SDS-025-kotaemon-rag.md) | Kotaemon RAG | Active | Use kotaemon for RAG UI with multi-user support and citations |

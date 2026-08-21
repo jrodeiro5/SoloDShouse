@@ -39,7 +39,7 @@ topics:
 
   - slug: data-flow
     title: Data Flow
-    description: Bronze→Silver→Gold medallion architecture
+    description: Bronze->Silver->Gold medallion architecture
     parents:
       - concepts
 
@@ -112,3 +112,37 @@ topics:
     title: Getting Started
     description: Front door and entry points for new users
     parents: []
+
+  - slug: bronze-writer
+    title: Bronze Writer
+    description: Bronze-layer Iceberg writer with schema resolution
+    parents:
+      - ingestion
+      - data-model
+
+  - slug: transformations
+    title: Transformations
+    description: Silver and Gold layer processing with dbt and ML integration
+    parents:
+      - architecture
+      - data-flow
+
+  - slug: ml-pipeline
+    title: ML Pipeline
+    description: Training, tracking, and serving with MLflow and BentoML
+    parents:
+      - agents
+      - transformations
+
+  - slug: storage-config
+    title: Storage Configuration
+    description: Bucket and URI resolution for SeaweedFS and Hive Metastore
+    parents:
+      - infrastructure
+      - configuration
+
+  - slug: schemas
+    title: Schemas
+    description: Iceberg schema definitions, YAML-driven schema format, and partition specs
+    parents:
+      - data-model
