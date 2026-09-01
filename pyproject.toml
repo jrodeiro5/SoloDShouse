@@ -29,7 +29,7 @@ dependencies = [
     "requests>=2.33",
     "pydantic>=2.12",
     # Connection layer (SDS-044)
-    "cryptography>=44.0",
+    "cryptography>=49.0",
     "pyjwt>=2.13",
     # Agent proxy (SDS-024)
     "fastapi>=0.115",
