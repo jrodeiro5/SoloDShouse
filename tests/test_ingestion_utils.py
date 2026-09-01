@@ -1,8 +1,9 @@
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 from ingestion.exceptions import CollectorUnavailableError, StepError
 from ingestion.http import make_session
-from ingestion.iceberg_schemas import schema_from_config, load_schema_config
+from ingestion.iceberg_schemas import load_schema_config, schema_from_config
 
 
 def test_collector_unavailable_error():
