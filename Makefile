@@ -11,6 +11,7 @@ SUPERSET_DB_NAME ?= superset_metadata
 
 # Runtime state (MinIO, Postgres, Dagster, OM) lives under docker/data/ (bind mounts), not Docker named volumes.
 prepare-data-dirs:
+	@test -f .env || cp .env.example .env
 	@sh scripts/prepare-docker-data-dirs.sh
 
 # Remove old named volumes from layouts before bind mounts (run after `make down`).
@@ -59,6 +60,7 @@ reset-mlflow-db:
 	@echo "MLflow metadata database reset complete."
 
 down:
+	@test -f .env || cp .env.example .env
 	$(DOCKER_COMPOSE) $(COMPOSE_STACK) down --remove-orphans
 
 clean:
