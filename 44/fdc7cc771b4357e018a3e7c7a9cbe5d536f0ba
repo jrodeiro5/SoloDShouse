@@ -1,0 +1,19 @@
+uv.lock
+  s_dd536f7699d5a1::t_cc10092120e5d1 920,925-971,1593,2432,2456,2458,2463,2466,2488,2490,2495,2507,2509,3301
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "44fdc7cc771b4357e018a3e7c7a9cbe5d536f0ba",
+  "prompts": {},
+  "sessions": {
+    "s_dd536f7699d5a1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f89faf3baffeXWpiVXNn8tWh7k",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "jrodeiro5 <jrodeiro.dev@gmail.com>"
+    }
+  }
+}
