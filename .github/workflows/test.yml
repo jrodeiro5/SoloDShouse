@@ -52,6 +52,7 @@ jobs:
           python-version: "3.13"
       - name: Start core stack and run pipeline
         run: |
+          cp .env.example .env
           make up
           make pipeline
       - name: Show container logs on failure
