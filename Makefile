@@ -2,7 +2,7 @@
 
 COMPOSE_FILE := docker/docker-compose.yml
 COMPOSE_STACK := -f docker/docker-compose.yml
-ENV_FILE ?= .env
+ENV_FILE ?= $(if $(wildcard .env),.env,.env.example)
 DOCKER_COMPOSE := docker compose --env-file $(ENV_FILE)
 PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 VENV_PYTHON := .venv/bin/python
@@ -11,6 +11,7 @@ SUPERSET_DB_NAME ?= superset_metadata
 
 # Runtime state (MinIO, Postgres, Dagster, OM) lives under docker/data/ (bind mounts), not Docker named volumes.
 prepare-data-dirs:
+	@test -f .env || cp .env.example .env
 	@sh scripts/prepare-docker-data-dirs.sh
 
 # Remove old named volumes from layouts before bind mounts (run after `make down`).
