@@ -30,6 +30,7 @@ init-iceberg:
 	$(PYTHON) scripts/init-iceberg-namespaces.py
 
 up: prepare-data-dirs
+	@test -f .env || cp .env.example .env
 	$(DOCKER_COMPOSE) $(COMPOSE_STACK) up -d postgres seaweedfs
 	$(MAKE) wait-postgres-ready
 	$(MAKE) bootstrap-db
@@ -59,6 +60,7 @@ reset-mlflow-db:
 	@echo "MLflow metadata database reset complete."
 
 down:
+	@test -f .env || cp .env.example .env
 	$(DOCKER_COMPOSE) $(COMPOSE_STACK) down --remove-orphans
 
 clean:
