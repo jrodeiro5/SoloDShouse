@@ -30,7 +30,7 @@ dependencies = [
     "pydantic>=2.12",
     # Connection layer (SDS-044)
     "cryptography>=44.0",
-    "pyjwt>=2.13",
+    "pyjwt>=2.15.1",
     # Agent proxy (SDS-024)
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
