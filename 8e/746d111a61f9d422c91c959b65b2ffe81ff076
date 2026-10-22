@@ -1,0 +1,19 @@
+docker/docker-compose.yml
+  s_62dd9932d1e598::t_40c2076b2a6310 288
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8e746d111a61f9d422c91c959b65b2ffe81ff076",
+  "prompts": {},
+  "sessions": {
+    "s_62dd9932d1e598": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0cb82fea-d837-4a68-b46e-dd2af11f0a83",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "jrodeiro5 <jrodeiro.dev@gmail.com>"
+    }
+  }
+}
