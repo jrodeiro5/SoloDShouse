@@ -285,7 +285,7 @@ services:
         reservations:
           memory: 256M
   litellm:
-    image: ghcr.io/berriai/litellm:main-latest
+    image: ghcr.io/berriai/litellm:v1.104.3@sha256:c1909418aea76c798222f701ccd27a1b963d8cf713f797fa072fd222a6a774a4  # pinned: main-latest was compromised 2026-10-21 (MAL-2026-2144)
     container_name: sds-litellm
     profiles:
     - agent
