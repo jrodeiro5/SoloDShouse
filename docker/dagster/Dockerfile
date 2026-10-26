@@ -5,7 +5,10 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl libgomp1 && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml requirements-dagster.txt ./
-RUN pip install --no-cache-dir -r requirements-dagster.txt && pip install --no-cache-dir -e .
+# dagster_postgres builds engines through SQLAlchemy, which resolves
+# postgresql:// to its psycopg (v3) dialect; psycopg2 alone crashes
+# dagster-webserver/daemon on start with "No module named 'psycopg'".
+RUN pip install --no-cache-dir -r requirements-dagster.txt "psycopg[binary]" && pip install --no-cache-dir -e .
 
 COPY ingestion ./ingestion
 COPY transformations ./transformations

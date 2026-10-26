@@ -154,9 +154,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 1024M
         reservations:
-          memory: 256M
+          memory: 1024M
   dagster-webserver:
     build:
       context: ..
@@ -220,9 +220,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1024M
         reservations:
-          memory: 512M
+          memory: 1024M
   dagster-daemon:
     build:
       context: ..
