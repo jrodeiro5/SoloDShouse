@@ -18,10 +18,14 @@ purge-legacy-docker-volumes:
 	@sh scripts/purge-legacy-docker-volumes.sh
 
 # Ensure required DBs exist before MLflow and other clients start (avoids race with bootstrap-db).
+# -h 127.0.0.1 matters: initdb's temporary server answers only on the unix
+# socket, so a socket-only pg_isready passes *during* init and bootstrap-db
+# then connects into the temp->real restart gap and gets "server closed the
+# connection unexpectedly". TCP only comes up with the real server.
 wait-postgres-ready:
 	@echo "Waiting for PostgreSQL to accept connections..."
 	@for i in $$(seq 1 90); do \
-		docker exec sds-postgres sh -c 'pg_isready -U "$$POSTGRES_USER" -d postgres' >/dev/null 2>&1 && exit 0; \
+		docker exec sds-postgres sh -c 'pg_isready -h 127.0.0.1 -U "$$POSTGRES_USER" -d postgres' >/dev/null 2>&1 && exit 0; \
 		sleep 1; \
 	done; \
 	echo "Postgres did not become ready in time."; exit 1
