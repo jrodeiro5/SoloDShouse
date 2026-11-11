@@ -89,7 +89,7 @@ def test_load_schema_config_reads_yaml_file(tmp_path, monkeypatch) -> None:
     (schema_dir / "carbon_intensity.yaml").write_text(
         "source: carbon_intensity\ncolumns: []\n", encoding="utf-8"
     )
-    monkeypatch.setattr(ingestion.iceberg_schemas, "_SCHEMAS_DIR", schema_dir)
+    monkeypatch.setattr(iceberg_schemas, "_SCHEMAS_DIR", schema_dir)
 
     config = load_schema_config("carbon_intensity")
 
