@@ -30,6 +30,8 @@ init-iceberg:
 	$(PYTHON) scripts/init-iceberg-namespaces.py
 
 up: prepare-data-dirs
+	@test -f $(ENV_FILE) || cp .env.example $(ENV_FILE)
+	@$(PYTHON) -c "import psycopg2, requests, structlog, pyiceberg" 2>/dev/null || { echo "Installing host-side deps for scripts into $(PYTHON)..."; $(PYTHON) -m pip install .; }
 	$(DOCKER_COMPOSE) $(COMPOSE_STACK) up -d postgres seaweedfs
 	$(MAKE) wait-postgres-ready
 	$(MAKE) bootstrap-db
