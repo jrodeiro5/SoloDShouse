@@ -5,10 +5,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl libgomp1 && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml requirements-dagster.txt ./
-# dagster_postgres builds engines through SQLAlchemy, which resolves
-# postgresql:// to its psycopg (v3) dialect; psycopg2 alone crashes
-# dagster-webserver/daemon on start with "No module named 'psycopg'".
-RUN pip install --no-cache-dir -r requirements-dagster.txt "psycopg[binary]" && pip install --no-cache-dir -e .
+# SQLAlchemy 2.1 resolves postgresql:// to its psycopg (v3) dialect, which
+# dagster-postgres 0.29 does not support: webserver/daemon crash-loop on
+# start with "psycopg.OperationalError: the connection is closed". Pin 2.0
+# so the URL resolves to psycopg2 (installed via dagster-postgres).
+RUN pip install --no-cache-dir -r requirements-dagster.txt "sqlalchemy<2.1" && pip install --no-cache-dir -e .
 
 COPY ingestion ./ingestion
 COPY transformations ./transformations
