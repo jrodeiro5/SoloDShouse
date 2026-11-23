@@ -4,4 +4,5 @@ CREATE DATABASE dagster_storage;
 
 \c postgres
 CREATE EXTENSION IF NOT EXISTS vector;
-CREATE EXTENSION IF NOT EXISTS postgis;
+-- No postgis: pgvector/pgvector:pg17 does not ship it, and this line aborts
+-- fresh initdb (docker-entrypoint exit 3). Tracked in task.md "Add PostGIS extension".
