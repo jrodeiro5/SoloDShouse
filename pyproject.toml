@@ -54,7 +54,7 @@ dev = [
     "ruff>=0.15",
     "mypy>=1.19",
     "types-requests>=2.33",
-    "dbt-core>=1.9",
+    "dbt-core>=1.9,<2",
     "dbt-duckdb>=1.9",
     "bandit[toml]>=1.8",      # security linter (PyCQA)
     "hexora>=0.1",            # malicious pattern detector (supply-chain + dependency audit)
@@ -62,6 +62,7 @@ dev = [
     "vulture>=2.14",          # dead code finder
     "wat-inspector>=0.3",     # object inspector for debugging (wat(obj))
     "ipykernel>=6.29",
+    "types-pyyaml>=6.0.12,<6.0.12.20261122",
 ]
 
 # QA: tests + browser automation — CI and local test runs
@@ -71,7 +72,7 @@ qa = [
     "pytest-cov>=7.1",
     "pytest-asyncio>=0.24",
     "playwright>=1.49",       # Moodle browser fallback + future E2E
-    "dbt-core>=1.9",          # dbt scaffold tests (SDS-041)
+    "dbt-core>=1.9,<2",          # dbt scaffold tests (SDS-041)
     "dbt-duckdb>=1.9",
 ]
 
